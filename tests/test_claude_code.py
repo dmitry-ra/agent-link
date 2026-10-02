@@ -17,6 +17,12 @@ class ClaudeCodeAdapter(unittest.TestCase):
                          [(S1, "project-1", "1.1", "%1", True)])
         self.assertEqual(refs[0].private["socket"].endswith("101.sock"), True)
 
+    def test_pane_found_by_process_not_by_registry_pane_id(self):
+        # The registry pane id may belong to another tmux server, or the pane may have moved.
+        self.home.add_session(101, S1, "renamed:@0.%3", socket="s")
+        ref = self.a.instances(self.ctx)[0]
+        self.assertEqual((ref.session, ref.pane_id), ("project-1", "%1"))
+
     def test_non_interactive_session_cannot_receive(self):
         self.home.add_session(101, S1, "project-1:@0.%1", socket="", kind="print")
         self.assertFalse(self.a.instances(self.ctx)[0].can_receive)

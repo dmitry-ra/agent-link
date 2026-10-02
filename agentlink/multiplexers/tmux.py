@@ -1,32 +1,61 @@
 """tmux provider."""
 
+import os
 import shutil
+import stat
 import subprocess
+from pathlib import Path
 
 NAME = "tmux"
 FORMAT = "#{session_name}\t#{window_index}.#{pane_index}\t#{pane_id}\t#{pane_pid}\t#{pane_current_path}"
 
 
+def servers():
+    """Socket paths of every tmux server of this user.
+
+    Agents may live in any server, not only the one agent-link runs in, and tmux pane ids
+    ("%0") are unique only inside one server.
+    """
+    found = set()
+    current = os.environ.get("TMUX", "").split(",")[0]
+    if current:
+        found.add(current)
+    base = Path(os.environ.get("TMUX_TMPDIR") or "/tmp") / f"tmux-{os.getuid()}"
+    try:
+        for p in base.iterdir():
+            if stat.S_ISSOCK(p.lstat().st_mode):
+                found.add(str(p))
+    except OSError:
+        pass
+    return sorted(found)
+
+
 def panes(make):
     if not shutil.which("tmux"):
         return []
-    try:
-        out = subprocess.run(["tmux", "list-panes", "-a", "-F", FORMAT], capture_output=True, text=True, timeout=10)
-    except (OSError, subprocess.SubprocessError):
-        return []
-    if out.returncode != 0:
-        return []
     result = []
-    for line in out.stdout.splitlines():
-        parts = line.split("\t")
-        if len(parts) == 5:
-            result.append(make(NAME, *parts))
+    for server in servers():
+        try:
+            out = subprocess.run(["tmux", "-S", server, "list-panes", "-a", "-F", FORMAT],
+                                 capture_output=True, text=True, timeout=10)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if out.returncode != 0:   # a socket left behind by a server that is gone
+            continue
+        name = Path(server).name
+        for line in out.stdout.splitlines():
+            parts = line.split("\t")
+            if len(parts) == 5:
+                session, position, pane_id, pid, cwd = parts
+                result.append(make(NAME, session, position, f"{name}:{pane_id}", pid, cwd, server))
     return result
 
 
 def screen(pane):
+    target = pane.pane_id.rsplit(":", 1)[-1]
     try:
-        out = subprocess.run(["tmux", "capture-pane", "-p", "-t", pane.pane_id], capture_output=True, text=True, timeout=10)
+        out = subprocess.run(["tmux", "-S", pane.server, "capture-pane", "-p", "-t", target],
+                             capture_output=True, text=True, timeout=10)
     except (OSError, subprocess.SubprocessError):
         return ""
     return out.stdout

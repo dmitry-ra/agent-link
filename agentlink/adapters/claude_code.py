@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 
 from ..model import NO_INBOX, OK, REFUSED, TIMEOUT, USAGE, AgentRef, LinkError, Receipt
+from .. import multiplexers
 from . import Adapter
 from ._claude_inbox import deliver
 
@@ -115,13 +116,15 @@ class ClaudeCode(Adapter):
         self.projects_dir = projects_dir
 
     def _ref(self, ctx, d):
-        session, pane_id = split_tmux(d.get("tmux", ""))
-        pane = ctx.pane_by_id.get(pane_id)
+        # The registry pane id names no tmux server and is written once at start, so the pane
+        # is found by process ancestry; the registry session is only a fallback.
+        session, _ = split_tmux(d.get("tmux", ""))
+        pane = multiplexers.pane_of(d["pid"], ctx.panes, ctx.table)
         sock = d.get("messagingSocketPath", "")
         return AgentRef(
             kind=self.kind, node=ctx.node, instance=d["sessionId"],
             session=pane.session if pane else session, position=pane.position if pane else "",
-            pane_id=pane_id, state=STATUS.get(d.get("status", ""), d.get("status") or "unknown"),
+            pane_id=pane.pane_id if pane else "", state=STATUS.get(d.get("status", ""), d.get("status") or "unknown"),
             cwd=d.get("cwd", ""), title=d.get("name", ""),
             can_receive=bool(sock) and d.get("kind") == "interactive",
             note="" if sock else "no inbox socket (not an interactive session)",

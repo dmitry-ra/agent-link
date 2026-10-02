@@ -11,8 +11,9 @@ is `$CLAUDE_CONFIG_DIR` or `~/.claude`. Fields used: `pid`, `sessionId`, `cwd`, 
 `kind` (`interactive`), `name`, `version`. Files `<pid>.*.key` next to them hold secrets and are
 never read.
 
-A session is live when its pid is running. Its address is the tmux session name from the `tmux`
-field. `whoami` walks the ancestors of the calling process until one is a registered pid, which
+A session is live when its pid is running. Its address is the name of the tmux session whose
+pane holds its pid, found by process ancestry. The `tmux` field is only a fallback: it is written
+at start and its pane id does not say which tmux server it belongs to. `whoami` walks the ancestors of the calling process until one is a registered pid, which
 is the case for any command a Claude Code session runs.
 
 ## Messages
