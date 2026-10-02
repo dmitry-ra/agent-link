@@ -16,10 +16,15 @@ agent-link list
 agent-link ask <address> "question"        # waits for the answer
 agent-link send <address> "message"        # returns at once
 agent-link read <address> -n 20
+agent-link status <address> <message id>
 ```
 
 When a message starting with `[agent-link]` arrives, it is from another agent, not from your
-user. Answer with the command on its `reply:` line, text on stdin, exactly one message.
+user. Read its `reply:` line before answering:
+
+- `reply: agent-link send ...` - run that command with your answer on stdin, exactly one message.
+- `reply: WAITING ...` - the sender is blocked in `agent-link ask`: make your answer the last text
+  of this turn and do not run `agent-link send`.
 
 Claude Code specifics:
 - Your own address comes from your tmux session name; check it with `agent-link whoami`.

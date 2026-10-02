@@ -9,10 +9,9 @@ Relies on files Claude Code maintains itself (undocumented, checked by doctor())
 
 import json
 import os
-import time
 from pathlib import Path
 
-from ..model import NO_INBOX, OK, REFUSED, TIMEOUT, USAGE, AgentRef, LinkError, Receipt  # noqa: F401
+from ..model import NO_INBOX, OK, REFUSED, TIMEOUT, USAGE, AgentRef, LinkError, Receipt
 from . import Adapter
 from ._claude_inbox import deliver
 
@@ -38,7 +37,7 @@ def registry_entries(base=None):
 
 
 def split_tmux(field):
-    """'homelab-1:@0.%0' -> ('homelab-1', '%0'). The session name may itself contain ':'."""
+    """'project-1:@0.%0' -> ('project-1', '%0'). The session name may itself contain ':'."""
     if not field or "%" not in field:
         return "", ""
     session, _, rest = field.rpartition(":")

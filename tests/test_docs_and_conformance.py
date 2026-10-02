@@ -28,11 +28,28 @@ class DocsMatchCli(unittest.TestCase):
             known = {o for a in sub[c]._actions for o in a.option_strings}
             self.assertIn(flag, known, f"AGENTS.md uses 'agent-link {c} ... {flag}'")
 
-    def test_repository_is_ascii(self):
+    def test_no_machine_specifics(self):
+        # A list of one machine's names would itself leak them; look for the shapes instead.
+        home = re.compile(r"/(home|Users)/[a-z_][a-z0-9_-]*/|[A-Z]:\\Users\\")
+        ipv4 = re.compile(r"\b(?!127\.0\.0\.1\b|0\.0\.0\.0\b)(\d{1,3}\.){3}\d{1,3}\b")
         for f in ROOT.rglob("*"):
-            if f.is_file() and ".git" not in f.parts and f.suffix in (".py", ".md", ".sh", ".toml", "") and f.stat().st_size < 10**6:
-                data = f.read_bytes()
-                self.assertTrue(all(b < 128 for b in data), f"non-ASCII byte in {f.relative_to(ROOT)}")
+            if f.is_file() and ".git" not in f.parts and f.suffix in (".py", ".md", ".sh", ".toml", ".yml", ""):
+                text = f.read_text(encoding="utf-8", errors="replace")
+                self.assertIsNone(home.search(text), f"absolute home path in {f.relative_to(ROOT)}")
+                self.assertIsNone(ipv4.search(text), f"IPv4 address in {f.relative_to(ROOT)}")
+
+    def test_repository_is_keyboard_ascii(self):
+        # Printable ASCII plus newline and tab: what can be typed on any keyboard. No typographic
+        # dashes or quotes, no non-breaking spaces, no control characters, in names or contents.
+        for f in ROOT.rglob("*"):
+            if ".git" in f.parts or "__pycache__" in f.parts:
+                continue
+            rel = f.relative_to(ROOT)
+            self.assertTrue(all(0x20 <= ord(c) <= 0x7E for c in str(rel)), f"non-keyboard character in name {rel}")
+            if f.is_file() and not f.is_symlink() and f.stat().st_size < 10**6:
+                for n, line in enumerate(f.read_bytes().split(b"\n"), 1):
+                    bad = [b for b in line if not (0x20 <= b <= 0x7E or b == 0x09)]
+                    self.assertFalse(bad, f"{rel}:{n}: byte 0x{bad[0]:02x}" if bad else "")
 
 
 class Conformance(unittest.TestCase):

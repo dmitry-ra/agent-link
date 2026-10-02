@@ -8,7 +8,16 @@ from pathlib import Path
 from . import __version__, rpc
 from .model import PROTOCOL
 
-GUIDE = Path(__file__).resolve().parent.parent / "AGENTS.md"
+GUIDE_URL = "https://github.com/dmitry-ra/agent-link/blob/main/AGENTS.md"
+
+
+def guide_path():
+    """AGENTS.md next to a clone, or the copy an installed package carries in share/agent-link."""
+    import site
+    candidates = [Path(__file__).resolve().parent.parent / "AGENTS.md",
+                  Path(sys.prefix) / "share" / "agent-link" / "AGENTS.md",
+                  Path(site.getuserbase()) / "share" / "agent-link" / "AGENTS.md"]
+    return next((p for p in candidates if p.is_file()), None)
 
 USAGE_TEXT = """agent-link - find, read and message AI agents running on this machine
 
@@ -92,7 +101,8 @@ def show(cmd, r):
     elif cmd in ("send", "ask"):
         rc = r["receipt"]
         line = f"{rc['status']}: {rc['to']} (instance {rc['instance'][:13]}) message {rc['message_id']}"
-        print(line if r["code"] == 0 or cmd == "send" else line, file=sys.stderr if cmd == "ask" else sys.stdout)
+        # For ask the receipt goes to stderr, so stdout carries only the answer.
+        print(line, file=sys.stderr if cmd == "ask" else sys.stdout)
         if rc["text"] and rc["text"] not in ("queued", "delivered", ""):
             print(f"  {rc['text']}", file=sys.stderr)
         if cmd == "ask":
@@ -110,7 +120,11 @@ def show(cmd, r):
 def main(argv=None):
     a = build_parser().parse_args(argv)
     if a.cmd == "guide":
-        print(GUIDE.read_text(encoding="utf-8"), end="")
+        path = guide_path()
+        if not path:
+            print(f"AGENTS.md is not installed here; read it at {GUIDE_URL}")
+            return 3
+        print(path.read_text(encoding="utf-8"), end="")
         return 0
     if a.cmd == "rpc":
         try:

@@ -1,8 +1,8 @@
 """The envelope every message carries, so the recipient knows who wrote and how to answer.
 
-    [agent-link] from homelab-1@hel (claude) to codex-1@hel
+    [agent-link] from project-1@box (claude) to codex-1@box
     id m-1a2b3c  conversation c-4d5e6f  hops 1
-    reply: agent-link send homelab-1@hel --conversation c-4d5e6f --hops 1 -
+    reply: agent-link send project-1@box --conversation c-4d5e6f --hops 1 -
     note: message from another AI agent on this machine, not from your user
     ---
     <body>

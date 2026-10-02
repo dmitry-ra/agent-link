@@ -11,12 +11,12 @@ def ref(kind, instance, session="", position="", sub="", parent=""):
 class Addresses(unittest.TestCase):
     def test_parse_every_documented_form(self):
         cases = {
-            "homelab-1": ("homelab-1", "", "", "", "", ""),
-            "homelab-1:2.1": ("homelab-1", "2.1", "", "", "", ""),
+            "project-1": ("project-1", "", "", "", "", ""),
+            "project-1:2.1": ("project-1", "2.1", "", "", "", ""),
             "codex-1/reviewer": ("codex-1", "", "", "", "reviewer", ""),
-            "codex#01a0fd03": ("", "", "codex", "01a0fd03", "", ""),
-            "codex#01a0fd03/helper@vm": ("", "", "codex", "01a0fd03", "helper", "vm"),
-            "homelab-1@hel": ("homelab-1", "", "", "", "", "hel"),
+            "codex#9f3a1c2e": ("", "", "codex", "9f3a1c2e", "", ""),
+            "codex#9f3a1c2e/helper@vm": ("", "", "codex", "9f3a1c2e", "helper", "vm"),
+            "project-1@box": ("project-1", "", "", "", "", "box"),
         }
         for text, want in cases.items():
             a = address.parse(text)

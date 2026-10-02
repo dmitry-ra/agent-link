@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: unit and conformance tests
+        run: python -m unittest discover -s tests -t . -v
+
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: mutants (each core mechanism broken in turn must fail the tests)
+        run: python tools/mutate.py
+      - name: pyflakes
+        run: |
+          python -m pip install --quiet pyflakes
+          python -m pyflakes agentlink tests tools bin/agent-link
+      - name: shellcheck
+        run: shellcheck install.sh integrations/codex-tui.sh
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: build a wheel and install it into a clean environment
+        run: |
+          python -m pip install --quiet build
+          python -m build --wheel
+          python -m venv /tmp/venv
+          /tmp/venv/bin/pip install --quiet dist/*.whl
+      - name: installed program runs and carries its guide
+        run: |
+          cd /tmp
+          /tmp/venv/bin/agent-link --version
+          /tmp/venv/bin/agent-link guide | head -1 | grep -qx '# agent-link'
+          /tmp/venv/bin/agent-link doctor --json > /tmp/doctor.json || true
+          python -c "import json; d = json.load(open('/tmp/doctor.json')); assert d['protocol'] == 1, d"

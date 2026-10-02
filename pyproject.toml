@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-link"
+version = "0.1.0"
+description = "Find, read and message AI coding agents (Claude Code, Codex CLI) running on one machine"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Dmitry Razumikhin" }]
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Environment :: Console",
+    "Topic :: Software Development",
+]
+
+[project.urls]
+Homepage = "https://github.com/dmitry-ra/agent-link"
+
+[project.scripts]
+agent-link = "agentlink.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["agentlink*"]
+
+[tool.setuptools.data-files]
+"share/agent-link" = ["AGENTS.md"]
