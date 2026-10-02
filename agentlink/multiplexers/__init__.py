@@ -15,7 +15,7 @@ class Pane:
     provider: str
     session: str      # stable name, the address of the agent inside
     position: str     # "window.pane", e.g. "1.1"
-    pane_id: str      # unique on the machine, e.g. tmux "default:%0" (server name, pane id)
+    pane_id: str      # opaque, unique on the machine, e.g. tmux "/tmp/tmux-1000/default:%0"
     pid: str          # pid of the process the pane started
     cwd: str
     server: str = ""  # how the provider reaches the server, e.g. tmux socket path

@@ -13,8 +13,9 @@ FORMAT = "#{session_name}\t#{window_index}.#{pane_index}\t#{pane_id}\t#{pane_pid
 def servers():
     """Socket paths of every tmux server of this user.
 
-    Agents may live in any server, not only the one agent-link runs in, and tmux pane ids
-    ("%0") are unique only inside one server.
+    Like tmux itself, this finds the servers in the socket directory of the caller's
+    TMUX_TMPDIR, plus the current one. Agents may live in any of them, and tmux pane ids ("%0")
+    are unique only inside one server, so pane ids here carry the socket path.
     """
     found = set()
     current = os.environ.get("TMUX", "").split(",")[0]
@@ -22,11 +23,15 @@ def servers():
         found.add(current)
     base = Path(os.environ.get("TMUX_TMPDIR") or "/tmp") / f"tmux-{os.getuid()}"
     try:
-        for p in base.iterdir():
+        entries = list(base.iterdir())
+    except OSError:
+        entries = []
+    for p in entries:
+        try:
             if stat.S_ISSOCK(p.lstat().st_mode):
                 found.add(str(p))
-    except OSError:
-        pass
+        except OSError:   # gone since the listing
+            pass
     return sorted(found)
 
 
@@ -42,12 +47,11 @@ def panes(make):
             continue
         if out.returncode != 0:   # a socket left behind by a server that is gone
             continue
-        name = Path(server).name
         for line in out.stdout.splitlines():
             parts = line.split("\t")
             if len(parts) == 5:
                 session, position, pane_id, pid, cwd = parts
-                result.append(make(NAME, session, position, f"{name}:{pane_id}", pid, cwd, server))
+                result.append(make(NAME, session, position, f"{server}:{pane_id}", pid, cwd, server))
     return result
 
 
