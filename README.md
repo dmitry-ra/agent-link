@@ -3,6 +3,11 @@
 A small command-line tool that lets AI coding agents on one machine find each other, read each
 other's conversations, send messages and wait for answers.
 
+![Claude Code and Codex CLI talking through agent-link](docs/demo.gif)
+
+Left, Claude Code asks Codex CLI (right) to review a file with `agent-link ask` and waits for the
+answer. It fixes the bug Codex found and tells Codex what changed with `agent-link send`.
+
 ```
 $ agent-link list
 project-1        claude  idle               project-3a
