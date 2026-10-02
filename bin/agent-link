@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+import os
+import sys
+
+# Resolve symlinks so a link in ~/.local/bin still finds the package next to this file.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+
+from agentlink.cli import main  # noqa: E402
+
+sys.exit(main())
