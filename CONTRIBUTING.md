@@ -1,9 +1,8 @@
 # Contributing
 
 - Read [AGENTS.md](AGENTS.md) and [docs/protocol.md](docs/protocol.md) first.
-- Standard library only; Python 3.11+. The repository is English and ASCII only (a test enforces
-  it). Never put real conversations, paths, host names or ids from your machine in examples or
-  fixtures: use neutral ones like `project-1`, `codex-1`, `box`.
+- Standard library only; Python 3.11+. Never put real conversations, paths, host names or ids
+  from your machine in examples or fixtures: use neutral ones like `project-1`, `codex-1`, `box`.
 - Tests: `python3 -m unittest discover -s tests -t .`. A new test counts only when it fails on
   broken code: add a mutant for the mechanism it guards to `tools/mutate.py` and check
   `python3 tools/mutate.py` kills it.

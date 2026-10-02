@@ -34,8 +34,8 @@ refuse send with code 3).
 
 ## Level 2 - live, one machine
 
-Run against the agents actually running on the machine. Each scenario lists the expected
-result; the run log goes to `docs/findings/`.
+Run against real Claude Code and Codex CLI sessions in tmux. Each scenario lists the expected
+result; note the program versions with the result.
 
 | # | scenario | expected |
 |---|---|---|
@@ -54,35 +54,3 @@ result; the run log goes to `docs/findings/`.
 | L13 | hop limit | a message past the limit is refused with code 8 |
 | L14 | unknown, ambiguous and stale addresses | code 2 with candidates; never a silent wrong delivery |
 | L15 | two concurrent `ask` to two agents | answers do not mix |
-
-## Level 3 - usability by every agent on the machine
-
-The real acceptance test: agents that have never seen agent-link use it from AGENTS.md alone.
-Each agent gets one short request: "There is a tool at <path>; read its AGENTS.md, find agent
-X, ask it Y, and tell me what was unclear." Success means the agent completes the task without
-further hints. Every "unclear" note becomes a docs or CLI fix, and the task is repeated with a
-fresh agent session until no new notes appear.
-
-Participants are whatever agents run on the machine at test time (Claude Code and Codex CLI
-sessions, including busy ones that may decline; a decline is recorded, not forced).
-
-## Results
-
-### 2026-10-02, protocol 1
-
-Machine: one Linux host; Claude Code 2.1.284 and 2.1.285 (three sessions, one of them busy on
-other work), Codex CLI 0.160 (two TUIs, model gpt-6-astra) with subagents.
-
-- Level 0: 26 unit tests pass; 19/19 mutants killed (tools/mutate.py).
-- Level 1: conformance passes for both adapters.
-- Level 2: L1-L15 pass. Found and fixed during the run: Codex `resume` left the pane unbound
-  (now bound by `thread_settings_applied` at the resume moment, only when unambiguous); a
-  recipient answered an `ask` both in its output and by `send`, so `ask` returned "sent" instead
-  of the answer (the envelope now tells a recipient when the sender is waiting).
-- Level 3: all four other agents used agent-link from AGENTS.md alone. Their notes led to: list
-  titles and states explained, Claude Code session names accepted as addresses, `ask` semantics
-  and blocking explained, relation to built-in Claude Code messaging, a rule that local
-  permission rules still apply to peer requests, exit code 1 documented, `agent-link guide`.
-  Two policy findings for agent hosts rather than for this tool: an agent whose rules accept
-  instructions only from its user cannot act on any peer request until its rules say which peer
-  requests are fine; and Codex loads its AGENTS.md at thread start, so rule changes need `/new`.
