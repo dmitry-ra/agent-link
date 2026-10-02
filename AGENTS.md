@@ -1,6 +1,6 @@
 # agent-link
 
-Find, read and message the other AI agents running on this machine (Claude Code, Codex CLI,
+Find, read and message the other AI agents running on this machine (Claude Code, Codex CLI, Pi,
 more to come), and get their answers.
 
 It is one command-line program, `agent-link`, normally on your PATH. If it is not, it lives in the
@@ -114,7 +114,7 @@ which can be a refusal. Read it.
 ## agent-link and built-in agent messaging
 
 Claude Code has built-in ListAgents/SendMessage between Claude Code sessions. agent-link reaches
-every supported program (Claude Code, Codex, ...) with one command, computes the sender address,
+every supported program (Claude Code, Codex, Pi, ...) with one command, computes the sender address,
 adds a reply line and a hop counter, and can wait for the answer. Between two Claude Code sessions
 either works; a Claude Code recipient sees an agent-link message as a normal incoming message that
 starts with `[agent-link]`.
@@ -155,6 +155,10 @@ starts with `[agent-link]`.
   by a human in that pane; agent-link reports them with codes 4 and 7 instead of hanging. Codex
   reads its AGENTS.md rules when a thread starts, so after the rules change a running thread
   follows the old ones until `/new`.
+- **Pi** sessions are reachable only with the agent-link extension loaded
+  (`integrations/pi/agent-link.ts`); a Pi without it is listed with a note and cannot receive.
+  A message shows in the Pi pane as an `agent-link` message and starts a turn; to a busy Pi it
+  waits until the current work is done.
 
 Details, formats and known limits: `docs/adapters/`.
 
@@ -167,8 +171,8 @@ Details, formats and known limits: `docs/adapters/`.
 | `agentlink/address.py`, `envelope.py` | address grammar, message header |
 | `agentlink/adapters/` | one module per agent program; `_template.py` to add one |
 | `agentlink/multiplexers/` | tmux (where agents live, what their screens show) |
-| `integrations/` | helpers to start agent programs in an addressable way |
-| `skills/` | thin skill files for Claude Code and Codex that point here |
+| `integrations/` | helpers to start agent programs in an addressable way; the Pi extension |
+| `skills/` | thin skill files for Claude Code, Codex and Pi that point here |
 | `docs/` | protocol, adapters, how to add one, testing plan |
 | `tests/` | unit tests on fixtures, conformance tests for adapters |
 

@@ -1,5 +1,6 @@
 #!/bin/sh
-# Link agent-link into the user's PATH and into the skill directories of supported agents.
+# Link agent-link into the user's PATH, into the skill directories of supported agents, and its
+# extension into Pi's extension directory.
 # Safe to run again. Replaces only links that point into this repository; anything else at a
 # target path (a file, a directory, a link elsewhere) is left alone and reported.
 
@@ -30,6 +31,11 @@ link() {
 link "$repo/bin/agent-link" "$HOME/.local/bin/agent-link"
 [ -d "$HOME/.claude" ] && link "$repo/skills/claude-code/agent-link" "$HOME/.claude/skills/agent-link"
 [ -d "${CODEX_HOME:-$HOME/.codex}" ] && link "$repo/skills/codex/agent-link" "${CODEX_HOME:-$HOME/.codex}/skills/agent-link"
+pi_dir="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
+if [ -d "$pi_dir" ]; then
+    link "$repo/skills/pi/agent-link" "$pi_dir/skills/agent-link"
+    link "$repo/integrations/pi/agent-link.ts" "$pi_dir/extensions/agent-link.ts"
+fi
 
 case ":$PATH:" in
     *":$HOME/.local/bin:"*) ;;

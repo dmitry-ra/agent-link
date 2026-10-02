@@ -72,4 +72,5 @@ class Adapter:
 def registry():
     from .claude_code import ClaudeCode
     from .codex_cli import CodexCli
-    return [ClaudeCode(), CodexCli()]
+    from .pi import Pi
+    return [ClaudeCode(), CodexCli(), Pi()]

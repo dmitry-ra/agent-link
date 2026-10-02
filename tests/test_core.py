@@ -52,6 +52,7 @@ class Addresses(unittest.TestCase):
             ref("codex", "01a0fd3a-0003", "0", "0.1"),
             ref("codex", "01a0fd3a-0004", ""),
             ref("codex", "01a0fd3a-0099", "0", "0.1", sub="helper", parent="01a0fd3a-0002-aaaa"),
+            ref("pi", "01a0fd3a-0005", "0", "0.2"), ref("pi", "01a0fd3a-0006", ""),
         ])
         self.assertEqual(len({r.address for r in crowd}), len(crowd))
         for r in crowd:   # every address shown leads back to its agent

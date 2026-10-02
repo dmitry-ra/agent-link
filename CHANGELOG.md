@@ -8,6 +8,10 @@ First version.
 - Adapters: Claude Code (session registry, inbox socket, transcript) and Codex CLI (thread
   rollouts, `codex queue`, pane-to-thread binding through the TUI session log, including after
   `/new` and `resume`; subagents).
+- Adapter for Pi 1.0.0 with its extension (`integrations/pi/agent-link.ts`): registry entry and
+  unix-socket inbox per Pi process, messages as `agent-link` custom messages queued behind the
+  current work, and a settled marker in the session file so `ask` waits out retries and
+  continuations. `install.sh` links the extension and a Pi skill.
 - Addresses from tmux session names, across the tmux servers in the user's tmux socket
   directory; agents whose session address would collide are named `kind#id`. Program session
   names and `kind#id` are also accepted.

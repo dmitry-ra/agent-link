@@ -18,7 +18,7 @@ ok: codex-1 (instance 9f3a1c2e-...) message m-1a2b3c4d
 tests/test_cache.py::test_expiry
 ```
 
-Supported today: **Claude Code** and **Codex CLI** running in **tmux** on **Linux**. Built to
+Supported today: **Claude Code**, **Codex CLI** and **Pi** running in **tmux** on **Linux**. Built to
 grow: one adapter per agent program, one provider per terminal multiplexer, and (planned)
 transports to agents on other machines or virtual machines.
 
@@ -27,9 +27,9 @@ Agents using the tool: read [AGENTS.md](AGENTS.md), or run `agent-link guide`.
 ## Unofficial
 
 agent-link is an independent project. It is not affiliated with, endorsed by or supported by
-Anthropic or OpenAI. It works by reading files and using local interfaces that Claude Code and
-Codex CLI keep for themselves; none of them is a documented public API, and any release of
-those programs may change them. `agent-link doctor` checks what it relies on and says what
+Anthropic, OpenAI or the authors of Pi. It works by reading files and using local interfaces that
+Claude Code and Codex CLI keep for themselves, and through an extension for Pi; none of them is a
+documented public API, and any release of those programs may change them. `agent-link doctor` checks what it relies on and says what
 changed.
 
 ## Requirements
@@ -43,6 +43,7 @@ changed.
 |---|---|---|
 | Claude Code | 2.1.284, 2.1.285, 2.1.287 | messages need the session's inbox socket (`messagingSocketPath` in its session registry); `agent-link doctor` shows whether your version has it |
 | Codex CLI | 0.160.0 | start the terminal UI with `integrations/codex-tui.sh` (or set the two variables it sets) so its pane can be addressed |
+| Pi | 1.0.0 | load the extension `integrations/pi/agent-link.ts` (`install.sh` links it into `~/.pi/agent/extensions/`, or `pi -e <path>`); it gives Pi the registry entry and inbox agent-link needs |
 
 ## Install
 
@@ -52,8 +53,9 @@ From a clone:
 ./install.sh
 ```
 
-links `bin/agent-link` into `~/.local/bin` and the skill files into `~/.claude/skills` and
-`~/.codex/skills` when those directories exist. It is safe to run again and only replaces links
+links `bin/agent-link` into `~/.local/bin`, the skill files into `~/.claude/skills`,
+`~/.codex/skills` and `~/.pi/agent/skills`, and the Pi extension into `~/.pi/agent/extensions`,
+each when that program's directory exists. It is safe to run again and only replaces links
 that point into this repository.
 
 Or as a package (the program only; skills are linked by `install.sh`):
@@ -97,6 +99,10 @@ rather than calling `python3 bin/agent-link`.
   none"). A command allowed by a rule runs outside the sandbox. With `danger-full-access` nothing
   is hidden.
 
+- **Pi**: has no permission prompts of its own, so running `agent-link` needs no rule. What Pi
+  needs is its extension (see Requirements); without it Pi is listed but cannot be reached.
+  Guard extensions that ask before some commands apply to `agent-link` like to any command.
+
 To check, ask each agent to run `agent-link list`: it should show the other agents.
 
 A new Codex session can be addressed only after its first message: Codex writes the thread to
@@ -121,7 +127,8 @@ machine's name in addresses), `hop_limit` and `[aliases]`. See `agentlink/config
   10) messages are refused.
 - **Secrets.** agent-link never reads Claude Code's `*.key` files. The Codex session log it relies
   on contains what you type into Codex; `integrations/codex-tui.sh` keeps it in a private
-  directory.
+  directory. The Pi extension listens on a unix socket (mode 0600, in a 0700 directory of the
+  user), not on a network port.
 
 Report a vulnerability as described in [SECURITY.md](SECURITY.md).
 
