@@ -44,6 +44,10 @@ class ClaudeCodeAdapter(unittest.TestCase):
         self.assertEqual(cc.answer_after(lines(old), "m-abc"), ("pending", ""))
         self.assertEqual(cc.answer_after(lines(old + mine[:2]), "m-abc"), ("running", "thinking"))
         self.assertEqual(cc.answer_after(lines(old + mine), "m-abc"), ("done", "RIGHT"))
+        split = [claude_enqueue("msg m-xyz"), claude_assistant("hmm", msg_id="msg_1", thinking=True),
+                 claude_assistant("ANSWER", msg_id="msg_1"), {"type": "system"}]
+        self.assertEqual(cc.answer_after(lines(split), "m-xyz"), ("done", "ANSWER"))
+        self.assertEqual(cc.answer_after(lines(split[:2]), "m-xyz")[0], "running")
 
 
 if __name__ == "__main__":

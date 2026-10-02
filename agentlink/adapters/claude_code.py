@@ -12,7 +12,7 @@ import os
 import time
 from pathlib import Path
 
-from ..model import NO_INBOX, OK, REFUSED, TIMEOUT, USAGE, AgentRef, LinkError, Receipt
+from ..model import NO_INBOX, OK, REFUSED, TIMEOUT, USAGE, AgentRef, LinkError, Receipt  # noqa: F401
 from . import Adapter
 from ._claude_inbox import deliver
 
@@ -76,10 +76,11 @@ def entry_text(d):
 def answer_after(lines, tag):
     """(status, answer) for the turn that handled the message carrying tag.
 
-    status: pending (message not seen), running, done. The answer is the text of the last
-    assistant entry up to the first end_turn after the message.
+    status: pending (message not seen), running, done. Claude Code writes one model response
+    as several assistant records (a thinking block, then a text block), each carrying the
+    same message id and stop_reason end_turn; the turn is over only after the last of them.
     """
-    seen, last = False, ""
+    seen, last, end_id = False, "", None
     for line in lines:
         if not seen:
             seen = tag in line
@@ -88,14 +89,18 @@ def answer_after(lines, tag):
             d = json.loads(line)
         except ValueError:
             continue
+        m = d.get("message") or {}
+        if end_id is not None and not (d.get("type") == "assistant" and m.get("id") == end_id):
+            return "done", last
         if d.get("type") != "assistant":
             continue
-        m = d.get("message") or {}
         texts = [x.get("text", "") for x in m.get("content") or [] if isinstance(x, dict) and x.get("type") == "text"]
         if texts:
             last = "\n".join(texts)
         if m.get("stop_reason") == "end_turn":
-            return "done", last
+            end_id = m.get("id") or "end"
+    if end_id is not None and last:
+        return "done", last
     return ("running" if seen else "pending"), last
 
 
@@ -160,14 +165,11 @@ class ClaudeCode(Adapter):
         code = {"delivered": OK, "no-inbox": NO_INBOX, "too-large": USAGE}.get(status, REFUSED)
         return Receipt(code, detail or status, instance=ref.instance)
 
-    def await_reply(self, ctx, ref, message_id, timeout):
-        deadline = time.time() + timeout
-        while time.time() < deadline:
-            status, answer = answer_after(self._lines(ref), message_id)
-            if status == "done":
-                return OK, answer
-            time.sleep(2)
-        return TIMEOUT, f"no end of turn after {message_id} within {timeout}s"
+    def poll(self, ctx, ref, message_id):
+        status, answer = answer_after(self._lines(ref), message_id)
+        if status == "done":
+            return OK, "answered", answer
+        return TIMEOUT, status, answer
 
     def doctor(self, ctx):
         base = self.sessions_dir or config_dir() / "sessions"

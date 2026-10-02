@@ -29,8 +29,9 @@ agent-link read codex-1 -n 20                               # what it has been d
 | `whoami` | your address and kind; tells you if you cannot receive answers |
 | `list [--all]` | live agents; `--all` adds recent Codex threads not shown in any terminal |
 | `read ADDR [-n N]` | the last N entries of that agent's conversation |
-| `send ADDR TEXT` | deliver a message; prints a receipt; `TEXT` = `-` reads stdin |
+| `send ADDR TEXT` | deliver a message; prints a receipt with the message id; `TEXT` = `-` reads stdin |
 | `ask ADDR TEXT [--timeout S]` | send, then wait for the answer to this message and print it (default 600 s) |
+| `status ADDR MESSAGE_ID` | what happened to a message you sent: pending, running, answered, failed, blocked |
 | `guide` | print this file |
 | `doctor` | check that every supported agent program looks as agent-link expects |
 | `rpc` | one JSON request on stdin, JSON response on stdout (see docs/protocol.md) |
@@ -40,9 +41,11 @@ Add `--json` to any command for machine-readable output.
 `list` columns: address, kind, state, title. The title is the agent program's own name for the
 session (for Claude Code: the name its built-in ListAgents/SendMessage use, like `homelab-3a`);
 the address is what agent-link uses. Both name the same agent, and agent-link also accepts the
-title as an address when it is unique.
+title as an address when it is unique. Titles change when the agent restarts and subagents have
+none (shown as `-`); for repeated use, take the address.
 
-States: `idle` (waiting for input), `busy` (in a turn, including running a command),
+States: `idle` (waiting for input), `busy` (in a turn, including running a command; Claude Code calls
+that `shell`),
 `paused` (Codex: queue stopped after an interrupted turn), `awaiting-approval` (a human must
 approve a command in that pane), `error` (last turn failed), `unknown`. A message to a busy agent
 waits for its current turn.
@@ -83,9 +86,11 @@ your answer
 EOF
 ```
 
-- If the `reply:` line says the sender is waiting ("just answer in your normal output"), the
-  sender used `ask`: answer in your normal output and do not run `agent-link send`; your answer
-  is read when your turn ends.
+There are two kinds of `reply:` line; read it before answering:
+
+- `reply: agent-link send ...` - the sender is not waiting: run that command with your answer.
+- `reply: WAITING ...` - the sender used `ask` and is blocked until your turn ends: make your
+  answer the last text of this turn and do not run `agent-link send`.
 - Send exactly one message per reply. Check the exit code: 0 means delivered.
 - Keep `--conversation` and `--hops` as given: they stop two agents from answering each other
   forever (past the hop limit a message is refused with code 8).
@@ -119,6 +124,7 @@ starts with `[agent-link]`.
 | code | meaning | what to do |
 |---|---|---|
 | 0 | ok | |
+| 1 | internal error (a bug in agent-link) | report it with the command you ran |
 | 2 | bad call, unknown or ambiguous address | read the message: it lists valid addresses |
 | 3 | the recipient cannot take messages | see the note in `agent-link list` |
 | 4 | the recipient's turn waits for a human to approve a command | the human must answer in that terminal pane (named in the message) |
@@ -126,7 +132,6 @@ starts with `[agent-link]`.
 | 6 | the recipient's turn ended with an error or was aborted | read the recipient to see why |
 | 7 | the recipient's queue is paused after an interrupted turn | a human must type something neutral in that pane |
 | 8 | refused (hop limit, or the recipient's inbox refused it) | stop the exchange or ask your user |
-| 1 | internal error (a bug in agent-link) | report it with the command you ran |
 
 ## Rules for agents
 
@@ -144,12 +149,12 @@ starts with `[agent-link]`.
 
 - **Claude Code** sessions are found through the session registry Claude Code keeps itself.
   Messages land in the session's inbox and start a turn (or are read between tool calls).
-- **Codex CLI** reads its AGENTS.md rules when a thread starts: after the rules change, a running
-  thread still follows the old ones until `/new`.
 - **Codex CLI**: a Codex terminal is addressable only if it was started with
   `integrations/codex-tui.sh` (it switches on the session log that tells which thread the pane
   shows), and only after its first message. Approval dialogs and paused queues can only be cleared
-  by a human in that pane; agent-link reports them with codes 4 and 7 instead of hanging.
+  by a human in that pane; agent-link reports them with codes 4 and 7 instead of hanging. Codex
+  reads its AGENTS.md rules when a thread starts, so after the rules change a running thread
+  follows the old ones until `/new`.
 
 Details, formats and known limits: `docs/adapters/`.
 

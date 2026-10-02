@@ -72,7 +72,7 @@ class Envelopes(unittest.TestCase):
     def test_waiting_sender_asks_for_a_plain_answer(self):
         e = envelope.make("a@n", "claude", "b@n", "q", waiting=True)
         text = envelope.render(e)
-        self.assertIn("no agent-link send needed", text)
+        self.assertIn("\nreply: WAITING", text)
         self.assertTrue(envelope.parse(text).waiting)
         self.assertFalse(envelope.parse(envelope.render(envelope.make("a@n", "claude", "b@n", "q"))).waiting)
 

@@ -23,7 +23,8 @@ from .model import REFUSED, LinkError
 
 HEAD = "[agent-link]"
 SEPARATOR = "---"
-WAITING = "reply: just answer in your normal output; the sender is waiting for your turn to end, no agent-link send needed"
+WAITING = ("reply: WAITING - the sender is blocked until your turn ends; make your answer the last text of "
+           "this turn, do not run agent-link send")
 HEAD_RE = re.compile(r"^\[agent-link\] from (?P<sender>\S+) \((?P<kind>[^)]*)\) to (?P<to>\S+)$")
 META_RE = re.compile(r"^id (?P<id>m-[0-9a-f]+)\s+conversation (?P<conv>c-[0-9a-f]+)\s+hops (?P<hops>\d+)$")
 

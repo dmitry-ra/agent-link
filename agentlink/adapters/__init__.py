@@ -5,7 +5,9 @@ ADAPTERS below, add fixtures and tests (tests/conformance.py must pass), and des
 harness in docs/adapters/<kind>.md. See docs/adding-an-adapter.md.
 """
 
-from ..model import NO_INBOX, LinkError
+import time
+
+from ..model import NO_INBOX, TIMEOUT, LinkError
 
 
 class Context:
@@ -43,9 +45,24 @@ class Adapter:
         """Deliver text; return a Receipt."""
         raise LinkError(NO_INBOX, f"{self.kind}: sending is not supported")
 
+    def poll(self, ctx, ref, message_id):
+        """One look at the message carrying message_id: (code, status, text).
+
+        status: pending (not picked up yet), running, answered, failed, blocked.
+        code: OK when answered, otherwise the code a waiting caller would get now.
+        """
+        raise LinkError(NO_INBOX, f"{self.kind}: following a message is not supported")
+
     def await_reply(self, ctx, ref, message_id, timeout):
-        """Wait for the answer to the message carrying message_id; return (code, text)."""
-        raise LinkError(NO_INBOX, f"{self.kind}: waiting for replies is not supported")
+        """Poll until the message is answered or fails; return (code, text)."""
+        deadline = time.time() + timeout
+        while True:
+            code, status, text = self.poll(ctx, ref, message_id)
+            if status in ("answered", "failed", "blocked"):
+                return code, text
+            if time.time() >= deadline:
+                return TIMEOUT, f"no answer to {message_id} within {timeout}s (status {status})"
+            time.sleep(2)
 
     def doctor(self, ctx):
         """Checks of the formats and prerequisites this adapter relies on: list of (ok, text)."""

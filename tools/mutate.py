@@ -35,6 +35,8 @@ MUTANTS = [
      "for anc in ctx.table.ancestors(pid):", "for anc in [str(pid)]:"),
     ("claude: answer taken before end_turn", "agentlink/adapters/claude_code.py",
      "        if m.get(\"stop_reason\") == \"end_turn\":", "        if True:"),
+    ("claude: answer split across records cut short", "agentlink/adapters/claude_code.py",
+     'if end_id is not None and not (d.get("type") == "assistant" and m.get("id") == end_id):', "if end_id is not None:"),
     ("codex: /new ignored when no turn typed yet", "agentlink/adapters/codex_cli.py",
      'if kind in ("session_start", "new_session"):', 'if kind == "session_start":'),
     ("codex: no binding by marker time", "agentlink/adapters/codex_cli.py",

@@ -63,9 +63,10 @@ def claude_user(text):
     return {"type": "user", "timestamp": "2026-01-01T00:00:01Z", "message": {"role": "user", "content": text}}
 
 
-def claude_assistant(text, stop="end_turn"):
+def claude_assistant(text, stop="end_turn", msg_id=None, thinking=False):
+    block = {"type": "thinking", "thinking": text} if thinking else {"type": "text", "text": text}
     return {"type": "assistant", "timestamp": "2026-01-01T00:00:02Z",
-            "message": {"role": "assistant", "content": [{"type": "text", "text": text}], "stop_reason": stop}}
+            "message": {"id": msg_id or f"msg_{abs(hash(text)) % 10**8}", "role": "assistant", "content": [block], "stop_reason": stop}}
 
 
 def claude_enqueue(text):

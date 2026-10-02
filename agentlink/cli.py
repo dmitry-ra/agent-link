@@ -17,6 +17,7 @@ USAGE_TEXT = """agent-link - find, read and message AI agents running on this ma
   agent-link read ADDR [-n N]           what that agent has been doing
   agent-link send ADDR TEXT|-           deliver a message (TEXT '-' reads stdin)
   agent-link ask ADDR TEXT|- [--timeout S]   send and wait for the answer to it
+  agent-link status ADDR MESSAGE_ID     has that message been picked up, answered, blocked?
   agent-link guide                      print the full instructions (AGENTS.md)
   agent-link doctor                     check that every supported harness looks as expected
   agent-link rpc                        one JSON request on stdin, JSON response on stdout
@@ -44,6 +45,7 @@ def build_parser():
         p.add_argument("--conversation"); p.add_argument("--hops", type=int, default=0)
         if name == "ask":
             p.add_argument("--timeout", type=int, default=600)
+    p = sub.add_parser("status", parents=[common]); p.add_argument("address"); p.add_argument("message")
     sub.add_parser("doctor", parents=[common])
     sub.add_parser("guide")
     sub.add_parser("rpc")
@@ -57,6 +59,8 @@ def request_of(a):
         return {"op": "list", "all": a.all}
     if a.cmd == "read":
         return {"op": "read", "to": a.address, "limit": a.n}
+    if a.cmd == "status":
+        return {"op": "status", "to": a.address, "message": a.message}
     text = sys.stdin.read() if a.text == "-" else a.text
     req = {"op": a.cmd, "to": a.address, "text": text.rstrip("\n"), "hops": a.hops}
     if a.conversation:
@@ -78,7 +82,7 @@ def show(cmd, r):
         for g in r["agents"]:
             mark = " (you)" if g["address"] == r["me"] else ""
             note = f"  [{g['note']}]" if g["note"] else ""
-            print(f"{g['address'] + mark:28} {g['kind']:7} {g['state']:17} {g['title'][:40]}{note}")
+            print(f"{g['address'] + mark:28} {g['kind']:7} {g['state']:17} {(g['title'] or '-')[:40]}{note}")
     elif cmd == "read":
         g = r["agent"]
         print(f"# {g['address']}  {g['kind']}  {g['state']}  {g['title']}")
@@ -96,6 +100,8 @@ def show(cmd, r):
                 print(r.get("answer", ""))
             elif "answer" in r:
                 print(f"agent-link: {r['answer']}", file=sys.stderr)
+    elif cmd == "status":
+        print(f"{r['message']} at {r['agent']['address']}: {r['message_status']}" + (f"\n{r['detail']}" if r["detail"] else ""))
     elif cmd == "doctor":
         for c in r["checks"]:
             print(("ok   " if c["ok"] else "FAIL ") + c["text"])

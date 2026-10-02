@@ -89,7 +89,7 @@ def _handle(req):
         bad = [c for c in checks if not c["ok"]]
         return {**base, "ok": not bad, "code": OK if not bad else NO_INBOX, "checks": checks}
 
-    if op not in ("read", "send", "ask"):
+    if op not in ("read", "send", "ask", "status"):
         raise LinkError(USAGE, f"unknown op {op!r}")
     target = address.resolve(req.get("to", ""), refs, ctx.node, cfg["aliases"])
     a = adapter_for(target, alist)
@@ -97,6 +97,11 @@ def _handle(req):
     if op == "read":
         return {**base, "ok": True, "code": OK, "agent": target.public(),
                 "entries": a.read(ctx, target, int(req.get("limit", 30)))}
+
+    if op == "status":
+        code, status, text = a.poll(ctx, target, req.get("message", ""))
+        return {**base, "ok": True, "code": OK, "agent": target.public(), "message": req.get("message", ""),
+                "message_status": status, "detail": text}
 
     if target.kind == me.kind and target.instance == me.instance:
         raise LinkError(USAGE, f"{target.address} is you")

@@ -330,24 +330,32 @@ class CodexCli(Adapter):
                                    "'continue' makes Codex retry the interrupted step)", instance=ref.instance)
         return Receipt(OK, "queued", instance=ref.instance)
 
-    def await_reply(self, ctx, ref, message_id, timeout):
-        path = self._rollout(ref)
+    def poll(self, ctx, ref, message_id):
+        status, answers = answer_after(records(self._rollout(ref)), message_id)
+        if status == "task_complete":
+            return OK, "answered", answers[-1] if answers else ""
+        if status in ("error", "turn_aborted"):
+            return TURN_FAILED, "failed", f"turn ended with {status}: {answers[-1] if answers else ''}"
         pane = ctx.pane_by_id.get(ref.pane_id)
+        if pane:
+            dialog, paused, cmd = screen_flags(multiplexers.screen(pane))
+            if dialog:
+                return AWAITING_APPROVAL, "blocked", f"waiting for an approval dialog in pane {pane.session}:{pane.position}: {cmd}"
+            if paused and status == "pending":
+                return PAUSED, "blocked", f"thread paused; type in pane {pane.session}:{pane.position} to resume its queue"
+        return TIMEOUT, status, ""
+
+    def await_reply(self, ctx, ref, message_id, timeout):
+        # Screen states are trusted only after a grace period: a dialog seen at once may belong
+        # to an earlier turn that is about to be answered by the human.
         deadline, grace = time.time() + timeout, time.time() + 20
-        while time.time() < deadline:
-            status, answers = answer_after(records(path), message_id)
-            if status == "task_complete":
-                return OK, answers[-1] if answers else ""
-            if status in ("error", "turn_aborted"):
-                return TURN_FAILED, f"turn ended with {status}: {answers[-1] if answers else ''}"
-            if pane and time.time() > grace:
-                dialog, paused, cmd = screen_flags(multiplexers.screen(pane))
-                if dialog:
-                    return AWAITING_APPROVAL, f"waiting for an approval dialog in pane {pane.session}:{pane.position}: {cmd}"
-                if paused and status == "pending":
-                    return PAUSED, f"thread paused; type in pane {pane.session}:{pane.position} to resume its queue"
+        while True:
+            code, status, text = self.poll(ctx, ref, message_id)
+            if status in ("answered", "failed") or (status == "blocked" and time.time() > grace):
+                return code, text
+            if time.time() >= deadline:
+                return TIMEOUT, f"no answer to {message_id} within {timeout}s (status {status})"
             time.sleep(2)
-        return TIMEOUT, f"no answer to {message_id} within {timeout}s"
 
     def doctor(self, ctx):
         checks = [(shutil.which("codex") is not None, "codex on PATH")]
