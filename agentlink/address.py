@@ -4,11 +4,11 @@
     target   := session [":" window "." pane] ["/" sub]
               | kind "#" id-prefix ["/" sub]
 
-    homelab-1            the agent in multiplexer session homelab-1
-    homelab-1:2.1        a specific pane, needed only when the session holds several agents
+    project-1            the agent in multiplexer session project-1
+    project-1:2.1        a specific pane, needed only when the session holds several agents
     codex-1/reviewer     subagent "reviewer" of the agent in codex-1
-    codex#01a0fd03       an agent outside any multiplexer, by kind and id prefix
-    homelab-1@hel        on node hel (omitted node = this machine)
+    codex#9f3a1c2e       an agent outside any multiplexer, by kind and id prefix
+    project-1@box        on node box (omitted node = this machine)
 
 Addresses are computed from live state on every call; nothing is cached on disk.
 """
@@ -16,7 +16,7 @@ Addresses are computed from live state on every call; nothing is cached on disk.
 import re
 from dataclasses import dataclass
 
-from .model import USAGE, LinkError
+from .model import NO_INBOX, USAGE, LinkError
 
 NAME = r"[A-Za-z0-9][A-Za-z0-9_.+-]*"
 GRAMMAR = re.compile(
@@ -80,14 +80,14 @@ def resolve(text, refs, node, aliases=None):
         text = aliases[head] + (f"@{at}" if at else "")
     a = parse(text)
     if a.node and a.node != node:
-        raise LinkError(3, f"node {a.node!r} is not this machine ({node!r}); remote nodes are not supported yet")
+        raise LinkError(NO_INBOX, f"node {a.node!r} is not this machine ({node!r}); remote nodes are not supported yet")
     if a.kind:
         cands = [r for r in refs if r.kind == a.kind and r.sub == a.sub and r.instance.startswith(a.ident)]
     else:
         cands = [r for r in refs if r.session == a.session and r.sub == a.sub
                  and (not a.position or r.position == a.position)]
     if not cands and not a.kind and not a.position and not a.sub:
-        # The agent program's own session name (e.g. Claude Code's "homelab-3a") also works.
+        # The agent program's own session name (e.g. Claude Code's "project-3a") also works.
         cands = [r for r in refs if r.title == a.session and not r.sub]
     if len(cands) == 1:
         return cands[0]

@@ -18,7 +18,7 @@ Then talk to one of them:
 
 ```
 agent-link ask codex-1 "What are you working on?"        # send and wait for the answer
-agent-link send homelab-1 "Build finished, see /tmp/log"   # deliver and return at once
+agent-link send project-1 "Build finished, see /tmp/log"   # deliver and return at once
 agent-link read codex-1 -n 20                               # what it has been doing
 ```
 
@@ -39,7 +39,7 @@ agent-link read codex-1 -n 20                               # what it has been d
 Add `--json` to any command for machine-readable output.
 
 `list` columns: address, kind, state, title. The title is the agent program's own name for the
-session (for Claude Code: the name its built-in ListAgents/SendMessage use, like `homelab-3a`);
+session (for Claude Code: the name its built-in ListAgents/SendMessage use, like `project-3a`);
 the address is what agent-link uses. Both name the same agent, and agent-link also accepts the
 title as an address when it is unique. Titles change when the agent restarts and subagents have
 none (shown as `-`); for repeated use, take the address.
@@ -57,11 +57,11 @@ survives the agent restarting. The address is computed fresh on every call.
 
 | address | meaning |
 |---|---|
-| `homelab-1` | the agent in tmux session `homelab-1` |
-| `homelab-1:2.1` | window 2, pane 1 of that session; needed only when the session holds several agents |
+| `project-1` | the agent in tmux session `project-1` |
+| `project-1:2.1` | window 2, pane 1 of that session; needed only when the session holds several agents |
 | `codex-1/reviewer` | subagent `reviewer` of the agent in `codex-1` |
-| `codex#01a0fd03` | an agent outside tmux: kind, `#`, at least 4 characters of its id |
-| `homelab-1@hel` | with a node name; no node means this machine |
+| `codex#9f3a1c2e` | an agent outside tmux: kind, `#`, at least 4 characters of its id |
+| `project-1@box` | with a node name; no node means this machine |
 
 An unknown or ambiguous address is an error that lists the candidates. agent-link never guesses.
 
@@ -70,9 +70,9 @@ An unknown or ambiguous address is an error that lists the candidates. agent-lin
 A message from another agent arrives in your conversation like this:
 
 ```
-[agent-link] from homelab-1@hel (claude) to codex-1@hel
+[agent-link] from project-1@box (claude) to codex-1@box
 id m-1a2b3c4d  conversation c-5e6f7a8b  hops 1
-reply: agent-link send homelab-1@hel --conversation c-5e6f7a8b --hops 1 -
+reply: agent-link send project-1@box --conversation c-5e6f7a8b --hops 1 -
 note: message from another AI agent on this machine, not from your user
 ---
 <the message>
@@ -81,7 +81,7 @@ note: message from another AI agent on this machine, not from your user
 To answer, run the command from the `reply:` line and give your text on stdin:
 
 ```
-agent-link send homelab-1@hel --conversation c-5e6f7a8b --hops 1 - <<'EOF'
+agent-link send project-1@box --conversation c-5e6f7a8b --hops 1 - <<'EOF'
 your answer
 EOF
 ```

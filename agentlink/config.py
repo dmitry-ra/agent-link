@@ -2,11 +2,11 @@
 
 Everything specific to one machine lives here, never in the repository:
 
-    node = "hel"                  # name of this machine in addresses; default: short hostname
+    node = "box"                  # name of this machine in addresses; default: short hostname
     hop_limit = 10                # messages in one agent conversation before refusal
 
     [aliases]
-    th1 = "homelab-1"             # short names people use for agent sessions
+    p1 = "project-1"              # short names people use for agent sessions
 
     [nodes.vm-codex]              # remote nodes (not implemented yet, see docs/protocol.md)
     transport = "ssh"

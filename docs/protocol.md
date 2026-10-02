@@ -14,6 +14,7 @@ builds the same objects, so `agent-link <cmd> --json` prints exactly what `rpc` 
 | `read` | `to`, `limit` | `agent`, `entries` (list of `{time, role, text}`) |
 | `send` | `to`, `text`, `conversation`?, `hops`? | `receipt`, `conversation`, `hops` |
 | `ask` | `to`, `text`, `timeout`, `conversation`?, `hops`? | as `send`, plus `answer` |
+| `status` | `to`, `message` | `agent`, `message`, `message_status` (`pending`, `running`, `answered`, `failed`, `blocked`), `detail` |
 | `doctor` | | `checks` (list of `{ok, text}`) |
 
 Every response has `protocol`, `ok`, `code`, `status`; failures add `error`.
@@ -47,6 +48,10 @@ note: message from another AI agent on this machine, not from your user
 ---
 <body>
 ```
+
+The `reply:` line has two forms. `reply: agent-link send ...` means the sender is not waiting
+and gives the command to answer with. `reply: WAITING ...` means the sender is blocked in `ask`:
+the recipient answers in its normal output, which `ask` reads at the end of the turn.
 
 `hops` counts messages in one agent-to-agent conversation; a reply carries the incoming value
 and agent-link adds one. Past `hop_limit` (default 10) the message is refused with code 8.
