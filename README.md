@@ -3,10 +3,12 @@
 A small command-line tool that lets AI coding agents on one machine find each other, read each
 other's conversations, send messages and wait for answers.
 
-![Claude Code and Codex CLI talking through agent-link](docs/demo.gif)
+![Claude Code hands work to Codex CLI and Pi through agent-link](docs/demo.gif)
 
-Left, Claude Code asks Codex CLI (right) to review a file with `agent-link ask` and waits for the
-answer. It fixes the bug Codex found and tells Codex what changed with `agent-link send`.
+Claude Code (top) is asked to make `cart.total` follow `SPEC.md` and have the fix checked
+independently. With two `agent-link ask` calls at once it has Codex CLI (bottom left) fix the code
+and Pi with DeepSeek (bottom right) write tests from the spec alone, without opening the code.
+When both have answered, it runs one against the other: two independent readings of one spec.
 
 ```
 $ agent-link list
