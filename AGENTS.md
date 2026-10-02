@@ -60,7 +60,7 @@ survives the agent restarting. The address is computed fresh on every call.
 | `project-1` | the agent in tmux session `project-1` |
 | `project-1:2.1` | window 2, pane 1 of that session; needed only when the session holds several agents |
 | `codex-1/reviewer` | subagent `reviewer` of the agent in `codex-1` |
-| `codex#9f3a1c2e` | an agent outside tmux: kind, `#`, at least 4 characters of its id |
+| `codex#9f3a1c2e` | kind, `#`, at least 4 characters of its id: an agent outside tmux, or one whose session name another agent shares (two tmux servers) |
 | `project-1@box` | with a node name; no node means this machine |
 
 An unknown or ambiguous address is an error that lists the candidates. agent-link never guesses.

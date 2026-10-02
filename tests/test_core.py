@@ -44,10 +44,24 @@ class Addresses(unittest.TestCase):
         self.assertEqual(address.resolve("s1@n", refs, "n", aliases={"s1": "solo"}).instance, "c1")
         refs[0].title = "solo-3a"
         self.assertEqual(address.resolve("solo-3a", refs, "n").instance, "c1")
-        twins = address.assign([ref("claude", "aaaa1111", "0", "0.0"), ref("codex", "bbbb2222", "0", "0.0")])
-        self.assertEqual([r.address for r in twins], ["claude#aaaa1111", "codex#bbbb2222"])
-        for r in twins:   # two tmux servers, both with session "0": every address leads back
-            self.assertIs(address.resolve(r.address, twins, "n"), r)
+        # Two tmux servers, both with session "0"; Codex ids started in the same minute share
+        # their first 8 characters; one of them also matches an agent outside tmux.
+        crowd = address.assign([
+            ref("claude", "aaaa1111", "0", "0.0"),
+            ref("codex", "01a0fd3a-0001", "0", "0.0"), ref("codex", "01a0fd3a-0002-aaaa", "0", "0.1"),
+            ref("codex", "01a0fd3a-0003", "0", "0.1"),
+            ref("codex", "01a0fd3a-0004", ""),
+            ref("codex", "01a0fd3a-0099", "0", "0.1", sub="helper", parent="01a0fd3a-0002-aaaa"),
+        ])
+        self.assertEqual(len({r.address for r in crowd}), len(crowd))
+        for r in crowd:   # every address shown leads back to its agent
+            self.assertIs(address.resolve(r.address, crowd, "n"), r, r.address)
+        self.assertEqual(address.resolve("codex#01a0fd3a-0002/helper", crowd, "n").instance, "01a0fd3a-0099")
+        # A session agent alone keeps its session name, though its id starts like the other's.
+        pair = address.assign([ref("codex", "01a0fd3a-0004", ""), ref("codex", "01a0fd3a-0005", "work", "0.0")])
+        self.assertEqual([r.address for r in pair], ["codex#01a0fd3a", "work"])
+        for r in pair:
+            self.assertIs(address.resolve(r.address, pair, "n"), r, r.address)
         for text, code, word in (("shared", USAGE, "ambiguous"), ("nope", USAGE, "no agent"), ("solo@other", NO_INBOX, "not this machine")):
             with self.assertRaises(LinkError) as c:
                 address.resolve(text, refs, "n")
