@@ -78,8 +78,7 @@ rather than calling `python3 bin/agent-link`.
 
 - **Claude Code**: add the command to the `allow` list in `~/.claude/settings.json` (or a
   project's `.claude/settings.json`), next to what is already there. Without it, Claude asks
-  before every call. Checked with Claude Code's Bash sandbox off; with that sandbox on, its
-  socket restrictions apply to agent-link too.
+  before every call. Checked with Claude Code's Bash sandbox off; not checked with it on.
 
   ```json
   { "permissions": { "allow": ["Bash(agent-link:*)"] } }

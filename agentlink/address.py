@@ -7,7 +7,9 @@
     project-1            the agent in multiplexer session project-1
     project-1:2.1        a specific pane, needed only when the session holds several agents
     codex-1/reviewer     subagent "reviewer" of the agent in codex-1
-    codex#9f3a1c2e       an agent outside any multiplexer, by kind and id prefix
+    codex#9f3a1c2e       by kind and id prefix: an agent outside any multiplexer, or one whose
+                         session address another agent shares (equal session names in two
+                         tmux servers)
     project-1@box        on node box (omitted node = this machine)
 
 Addresses are computed from live state on every call; nothing is cached on disk.
@@ -47,27 +49,30 @@ def parse(text):
 
 
 def assign(refs):
-    """Give every AgentRef its shortest unambiguous address on this node."""
+    """Give every AgentRef the shortest address on this node that no other agent shares.
+
+    An agent climbs session, session:pane, kind#id prefix, kind#full id until its address is
+    unique: two tmux servers can hold equal session names, and Codex thread ids (UUIDv7) share
+    their first characters when started within a minute of each other.
+    """
     top = [r for r in refs if not r.sub]
-    per_session = {}
-    for r in top:
-        if r.session:
-            per_session.setdefault(r.session, []).append(r)
-    for r in top:
-        if r.session:
-            shared = len(per_session[r.session]) > 1
-            r.address = f"{r.session}:{r.position}" if shared else r.session
-        else:
-            r.address = f"{r.kind}#{r.instance[:8]}"
-    # Equal session names in two tmux servers (each server's first session is "0") would give
-    # two agents one address; such agents are named by kind and id instead.
-    groups = {}
-    for r in top:
-        groups.setdefault(r.address, []).append(r)
-    for same in groups.values():
-        if len(same) > 1:
-            for r in same:
-                r.address = f"{r.kind}#{r.instance[:8]}"
+
+    def ladder(r):
+        steps = [r.session, f"{r.session}:{r.position}"] if r.session else []
+        return steps + [f"{r.kind}#{r.instance[:8]}", f"{r.kind}#{r.instance}"]
+
+    level = {id(r): 0 for r in top}
+    while True:
+        groups = {}
+        for r in top:
+            steps = ladder(r)
+            r.address = steps[min(level[id(r)], len(steps) - 1)]
+            groups.setdefault(r.address, []).append(r)
+        clash = [r for g in groups.values() if len(g) > 1 for r in g if level[id(r)] < len(ladder(r)) - 1]
+        if not clash:
+            break
+        for r in clash:
+            level[id(r)] += 1
     by_instance = {r.instance: r for r in top}
     for r in refs:
         if r.sub:
@@ -90,8 +95,15 @@ def resolve(text, refs, node, aliases=None):
     a = parse(text)
     if a.node and a.node != node:
         raise LinkError(NO_INBOX, f"node {a.node!r} is not this machine ({node!r}); remote nodes are not supported yet")
+    # Every address assign() handed out is unique, so it names its agent even where the
+    # grammar below would match a second one (an id prefix shared with a session agent).
+    exact = [r for r in refs if r.address and r.address == text.split("@")[0]]
+    if len(exact) == 1:
+        return exact[0]
     if a.kind:
-        cands = [r for r in refs if r.kind == a.kind and r.sub == a.sub and r.instance.startswith(a.ident)]
+        # In kind#id/sub the id is the parent's.
+        cands = [r for r in refs if r.kind == a.kind and r.sub == a.sub
+                 and (r.parent if a.sub else r.instance).startswith(a.ident)]
     else:
         cands = [r for r in refs if r.session == a.session and r.sub == a.sub
                  and (not a.position or r.position == a.position)]

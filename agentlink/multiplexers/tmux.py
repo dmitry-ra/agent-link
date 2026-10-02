@@ -18,10 +18,11 @@ def servers():
     are unique only inside one server, so pane ids here carry the socket path.
     """
     found = set()
+    # tmux resolves links in these paths; so must we, or one server is listed twice.
     current = os.environ.get("TMUX", "").split(",")[0]
     if current:
-        found.add(current)
-    base = Path(os.environ.get("TMUX_TMPDIR") or "/tmp") / f"tmux-{os.getuid()}"
+        found.add(os.path.realpath(current))
+    base = Path(os.path.realpath(os.environ.get("TMUX_TMPDIR") or "/tmp")) / f"tmux-{os.getuid()}"
     try:
         entries = list(base.iterdir())
     except OSError:
