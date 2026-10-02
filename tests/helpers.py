@@ -125,3 +125,68 @@ def fake_codex_on_path(tmpdir):
     script.chmod(0o755)
     os.environ["PATH"] = f"{bin_dir}:{os.environ['PATH']}"
     return record
+
+
+P1 = "01a0fe18-0001-7000-8000-000000000001"   # pi session, tui
+P2 = "01a0fe18-0002-7000-8000-000000000002"   # pi session of a dead process
+P3 = "01a0fe18-0003-7000-8000-000000000003"   # pi -p started from inside P1
+
+
+def pi_context():
+    panes_ = [Pane("tmux", "pi-1", "1.1", "%4", "400", "/w"), Pane("tmux", "pi-2", "1.1", "%5", "500", "/w"),
+              Pane("tmux", "shell-1", "1.1", "%3", "300", "/w")]
+    # 400 -> pi 401 -> bash 402 -> agent-link 403, and 402 -> pi -p 404 -> bash 405 ;
+    # 500 -> pi 501 (no extension) -> bash 502 ; 300 -> vim 301
+    rows = [("1", "0", "init"), ("400", "1", "bash"), ("401", "400", "pi"), ("402", "401", "bash -c x"),
+            ("403", "402", "python3 bin/agent-link whoami"), ("404", "402", "pi -p hello"), ("405", "404", "bash -c y"),
+            ("500", "1", "bash"), ("501", "500", "pi"), ("502", "501", "bash -c z"), ("300", "1", "bash"),
+            ("301", "300", "vim")]
+    return Context("node1", ProcessTable(rows), panes_, hop_limit=3)
+
+
+class PiHome:
+    def __init__(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.registry = self.root / "agent-link" / "pi"
+        self.registry.mkdir(parents=True)
+        self.registry.chmod(0o700)
+        self.add(401, P1, socket=str(self.root / "401.sock"))
+        self.add(999, P2, socket=str(self.root / "999.sock"))
+        self.add(404, P3, mode="print", session_file="")
+
+    def add(self, pid, sid, socket="", mode="tui", state="idle", prompt="", session_file=None):
+        d = {"protocol": 1, "pid": pid, "session_id": sid,
+             "session_file": str(self.root / f"{sid}.jsonl") if session_file is None else session_file,
+             "cwd": "/w", "name": f"n{pid}", "socket": socket, "state": state, "prompt": prompt, "mode": mode,
+             "pi_version": "1.0.0"}
+        (self.registry / f"{pid}.json").write_text(json.dumps(d))
+
+    def session(self, sid, rows):
+        write_jsonl(self.root / f"{sid}.jsonl", [{"type": "session", "version": 3, "id": sid, "cwd": "/w"}] + rows)
+
+
+def pi_user(text):
+    return {"type": "message", "timestamp": "2026-01-01T00:00:01.000Z", "message": {"role": "user", "content": text}}
+
+
+def pi_assistant(text="", stop="stop", calls=(), error=None):
+    content = ([{"type": "thinking", "thinking": "hmm"}] + ([{"type": "text", "text": text}] if text else [])
+               + [{"type": "toolCall", "id": f"c{i}", "name": n, "arguments": {}} for i, n in enumerate(calls)])
+    m = {"role": "assistant", "content": content, "stopReason": stop}
+    if error:
+        m["errorMessage"] = error
+    return {"type": "message", "timestamp": "2026-01-01T00:00:02.000Z", "message": m}
+
+
+def pi_tool_result(text):
+    return {"type": "message", "message": {"role": "toolResult", "toolName": "bash", "content": [{"type": "text", "text": text}]}}
+
+
+def pi_inbox(text, custom_type="agent-link"):
+    return {"type": "custom_message", "timestamp": "2026-01-01T00:00:03.000Z", "customType": custom_type,
+            "content": text, "display": True}
+
+
+def pi_settled():
+    return {"type": "custom", "customType": "agent-link", "data": {"event": "settled"}}

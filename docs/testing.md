@@ -19,6 +19,8 @@ real on-disk formats of each supported harness.
 | envelope | render and parse round-trip; hop counter and conversation id survive a reply; hop limit refuses |
 | Claude Code adapter | session registry parsing, liveness, tmux field, transcript reading, reply detection after a tag |
 | Codex CLI adapter | rollout parsing (state, errors, aborted turns, subagent own records), TUI session-log binding of pane to thread, including after /new |
+| Pi adapter | registry liveness, panes without the extension, nearest-ancestor whoami, end of a turn (tool calls, retries, continuations, follow-ups in one run), socket delivery and refusals |
+| Pi extension | run under node against a fake Pi API: registry and states, inbox through its real socket, fails closed, settled marker, double load, private directory (skipped without a node that runs TypeScript) |
 | rpc | every CLI command is a request dict and a response dict; JSON output matches docs/protocol.md |
 | docs | every command and flag shown in AGENTS.md exists in the CLI (docs cannot drift from code) |
 
@@ -34,7 +36,7 @@ refuse send with code 3).
 
 ## Level 2 - live, one machine
 
-Run against real Claude Code and Codex CLI sessions in tmux. Each scenario lists the expected
+Run against real Claude Code, Codex CLI and Pi sessions in tmux. Each scenario lists the expected
 result; note the program versions with the result.
 
 | # | scenario | expected |

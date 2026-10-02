@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 
 # (name, file, original text, mutated text)
 MUTANTS = [
@@ -84,6 +85,74 @@ MUTANTS = [
      "        if ref.state == \"paused\":", "        if False:"),
     ("codex: approval dialog not seen", "agentlink/adapters/codex_cli.py",
      "dialog = any(\"Would you like to run\" in l", "dialog = any(False and \"Would you like to run\" in l"),
+    ("pi: dead registry entries listed", "agentlink/adapters/pi.py",
+     'registry_entries(self.dirs()) if runs_pi(ctx, d["pid"])]', "registry_entries(self.dirs())]"),
+    ("pi: reused pid taken for Pi", "agentlink/adapters/pi.py",
+     'return bool(PI_TITLE.match(ctx.table.args.get(str(pid), "")))', "return str(pid) in ctx.table.args"),
+    ("pi: shared registry directory read", "agentlink/adapters/pi.py",
+     "        if not private_dir(d):\n            continue\n", ""),
+    ("pi: listener of another user trusted", "agentlink/adapters/pi.py",
+     "        if uid != os.getuid():", "        if False:"),
+    ("pi: any agent-link message taken for the one asked about", "agentlink/adapters/pi.py",
+     'seen = is_inbox(d) and tag in text_of(d.get("content"))', "seen = is_inbox(d)"),
+    ("pi: any custom entry ends the turn", "agentlink/adapters/pi.py",
+     'return (d.get("type") == "custom" and d.get("customType") == CUSTOM_TYPE\n'
+     '            and (d.get("data") or {}).get("event") == "settled")', 'return d.get("type") == "custom"'),
+    ("pi: failed turn polled as answered", "agentlink/adapters/pi.py",
+     'return TURN_FAILED, status, f"turn ended with an error: {text}"', 'return OK, "answered", text'),
+    ("pi: message dropped by a session switch waited for", "agentlink/adapters/pi.py",
+     '            if status == "pending":\n                return TURN_FAILED',
+     '            if False:\n                return TURN_FAILED'),
+    ("pi: Pi without the extension not listed", "agentlink/adapters/pi.py",
+     "            if pid:\n", "            if False:\n"),
+    ("pi: whoami only checks itself", "agentlink/adapters/pi.py",
+     "anc = ctx.table.ancestors(pid)", "anc = [str(pid)]"),
+    ("pi: whoami takes the farthest Pi", "agentlink/adapters/pi.py",
+     "return min(mine, key=lambda t: t[0])[1]", "return max(mine, key=lambda t: t[0])[1]"),
+    ("pi: no whoami from the session variable", "agentlink/adapters/pi.py",
+     '        if env.get("PI_SESSION_ID"):', "        if False:"),
+    ("pi: inbox messages not read", "agentlink/adapters/pi.py",
+     '    if is_inbox(d):\n        return "inbox"', '    if False:\n        return "inbox"'),
+    ("pi: turn ends at the first stop or error (file only)", "agentlink/adapters/pi.py",
+     "if is_settled(d) or (finished and", 'if is_settled(d) or (final or {}).get("stopReason") in ("stop", "error") or (finished and'),
+    ("pi: a follow-up in the same run takes the answer", "agentlink/adapters/pi.py",
+     ' or (finished and (is_inbox(d) or message(d, "user")))', ""),
+    ("pi: steering ends the turn", "agentlink/adapters/pi.py",
+     "(finished and (is_inbox(d)", "((is_inbox(d)"),
+    ("pi: failed turn reported as answered", "agentlink/adapters/pi.py",
+     '            if final.get("stopReason") in FAILED:\n                return "failed"', '            if False:\n                return "failed"'),
+    ("pi: refusal reported as delivered", "agentlink/adapters/pi.py",
+     'if reply.get("ok") is True:', "if True:"),
+    ("pi: oversized message sent", "agentlink/adapters/pi.py",
+     "    if len(wire) > MAX_LINE_BYTES:", "    if False:"),
+    ("pi: exited Pi waited for", "agentlink/adapters/pi.py",
+     "        if not alive:", "        if False:"),
+    ("pi: open dialog not reported", "agentlink/adapters/pi.py",
+     'if live and live.get("state") == "awaiting-approval":', "if False:"),
+    ("pi extension: half a line delivered", "integrations/pi/agent-link.ts",
+     "} else if (nl >= 0) {", "} else {"),
+    ("pi extension: message delivered during a compaction", "integrations/pi/agent-link.ts",
+     "if (!running && !ctx.isIdle()) {", "if (false) {"),
+    ("pi extension: busy session steered", "integrations/pi/agent-link.ts",
+     'deliverAs: "followUp"', 'deliverAs: "steer"'),
+    ("pi extension: no settled marker", "integrations/pi/agent-link.ts",
+     '\t\tpi.appendEntry(CUSTOM_TYPE, { event: "settled" });\n', ""),
+    ("pi extension: both copies serve when loaded twice", "integrations/pi/agent-link.ts",
+     "if (shared[OWNER] !== undefined && !mine()) return;", ""),
+    ("pi extension: dialog not published", "integrations/pi/agent-link.ts",
+     'prompt = event.title ?? "";', ""),
+    ("pi extension: registry left after shutdown", "integrations/pi/agent-link.ts",
+     "fs.rmSync(`${base}.json`, { force: true });", ""),
+    ("pi extension: shared directory accepted", "integrations/pi/agent-link.ts",
+     "(st.mode & 0o077) !== 0", "false"),
+    ("pi extension: entry written through a link", "integrations/pi/agent-link.ts",
+     '\t\tfs.rmSync(`${base}.json.tmp`, { force: true });\n'
+     '\t\tfs.writeFileSync(`${base}.json.tmp`, `${JSON.stringify(entry)}\\n`, { mode: 0o600, flag: "wx" });',
+     '\t\tfs.writeFileSync(`${base}.json.tmp`, `${JSON.stringify(entry)}\\n`, { mode: 0o600 });'),
+    ("pi extension: rename not published", "integrations/pi/agent-link.ts",
+     '\tpi.on("session_info_changed", async () => {\n\t\tif (mine()) publish();', '\tpi.on("session_info_changed", async () => {\n\t\tif (false) publish();'),
+    ("pi extension: socket left open to the group", "integrations/pi/agent-link.ts",
+     "fs.chmodSync(socket, 0o600);", ""),
 ]
 
 
@@ -97,6 +166,9 @@ def main():
     if not run_tests(ROOT):
         print("baseline: tests already fail; fix them first")
         return 1
+    from tests.test_pi import typescript_node
+    if not typescript_node():
+        print("note: no node on PATH runs TypeScript; the Pi extension tests skip and its mutants survive")
     survivors = 0
     with tempfile.TemporaryDirectory() as tmp:
         for name, rel, old, new in MUTANTS:

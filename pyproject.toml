@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "agent-link"
 version = "0.1.0"
-description = "Find, read and message AI coding agents (Claude Code, Codex CLI) running on one machine"
+description = "Find, read and message AI coding agents (Claude Code, Codex CLI, Pi) running on one machine"
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Dmitry Razumikhin" }]
