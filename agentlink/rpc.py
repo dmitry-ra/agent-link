@@ -42,7 +42,7 @@ def whoami(ctx, adapter_list, refs, pid=None, env=None):
                     return r
             address.assign([me])
             return me
-    pane = ctx.pane_by_id.get(env.get("TMUX_PANE", ""))
+    pane = multiplexers.pane_of(pid, ctx.panes, ctx.table)
     me = AgentRef(kind="human", node=ctx.node, instance=str(pid), session=pane.session if pane else "",
                   position=pane.position if pane else "", can_receive=False,
                   note="not inside a known agent; messages from here cannot be answered")
