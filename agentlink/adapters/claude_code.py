@@ -16,7 +16,8 @@ from ..model import NO_INBOX, OK, REFUSED, TIMEOUT, USAGE, AgentRef, LinkError, 
 from . import Adapter
 from ._claude_inbox import deliver
 
-STATUS = {"busy": "busy", "idle": "idle", "waiting": "awaiting-approval"}
+# Claude Code reports "shell" while a command it started is running.
+STATUS = {"busy": "busy", "shell": "busy", "idle": "idle", "waiting": "awaiting-approval"}
 REQUIRED = ("pid", "sessionId", "cwd")
 
 

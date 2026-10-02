@@ -3,9 +3,9 @@
 Find, read and message the other AI agents running on this machine (Claude Code, Codex CLI,
 more to come), and get their answers.
 
-You do not need any special skill or tool to use it: it is one command-line program. Run it from
-this repository as `python3 bin/agent-link <command>`, or as `agent-link <command>` if it is
-installed on your PATH (`install.sh` does that). Python 3.11+ standard library only.
+It is one command-line program, `agent-link`, normally on your PATH. If it is not, it lives in the
+agent-link repository as `bin/agent-link` (run `python3 bin/agent-link ...` there; `install.sh`
+puts it on PATH). `agent-link guide` prints this file. Python 3.11+ standard library only.
 
 ## Start here
 
@@ -36,6 +36,16 @@ agent-link read codex-1 -n 20                               # what it has been d
 | `rpc` | one JSON request on stdin, JSON response on stdout (see docs/protocol.md) |
 
 Add `--json` to any command for machine-readable output.
+
+`list` columns: address, kind, state, title. The title is the agent program's own name for the
+session (for Claude Code: the name its built-in ListAgents/SendMessage use, like `homelab-3a`);
+the address is what agent-link uses. Both name the same agent, and agent-link also accepts the
+title as an address when it is unique.
+
+States: `idle` (waiting for input), `busy` (in a turn, including running a command),
+`paused` (Codex: queue stopped after an interrupted turn), `awaiting-approval` (a human must
+approve a command in that pane), `error` (last turn failed), `unknown`. A message to a busy agent
+waits for its current turn.
 
 ## Addresses
 
@@ -83,9 +93,23 @@ EOF
 ## Two ways to get an answer
 
 - `ask` waits: it reads the recipient's conversation until the turn that handled your message
-  ends, and prints the last thing the recipient said. Use it for questions.
+  ends, and prints the last thing the recipient said. Use it for short questions. It blocks you
+  for up to `--timeout` seconds (default 600): set a smaller timeout, or run it in the background
+  if your harness allows that.
 - `send` returns at once. The recipient answers later with `agent-link send <you>`, and the answer
-  arrives in your conversation as a new message. Use it for long tasks and notifications.
+  arrives in your conversation as a new message. Use it for long tasks and notifications, and
+  whenever you must not block.
+
+Exit code 0 from `ask` means the recipient's turn ended; the printed text is whatever it said,
+which can be a refusal. Read it.
+
+## agent-link and built-in agent messaging
+
+Claude Code has built-in ListAgents/SendMessage between Claude Code sessions. agent-link reaches
+every supported program (Claude Code, Codex, ...) with one command, computes the sender address,
+adds a reply line and a hop counter, and can wait for the answer. Between two Claude Code sessions
+either works; a Claude Code recipient sees an agent-link message as a normal incoming message that
+starts with `[agent-link]`.
 
 ## Exit codes
 
@@ -99,6 +123,7 @@ EOF
 | 6 | the recipient's turn ended with an error or was aborted | read the recipient to see why |
 | 7 | the recipient's queue is paused after an interrupted turn | a human must type something neutral in that pane |
 | 8 | refused (hop limit, or the recipient's inbox refused it) | stop the exchange or ask your user |
+| 1 | internal error (a bug in agent-link) | report it with the command you ran |
 
 ## Rules for agents
 
@@ -113,6 +138,8 @@ EOF
 
 - **Claude Code** sessions are found through the session registry Claude Code keeps itself.
   Messages land in the session's inbox and start a turn (or are read between tool calls).
+- **Codex CLI** reads its AGENTS.md rules when a thread starts: after the rules change, a running
+  thread still follows the old ones until `/new`.
 - **Codex CLI**: a Codex terminal is addressable only if it was started with
   `integrations/codex-tui.sh` (it switches on the session log that tells which thread the pane
   shows), and only after its first message. Approval dialogs and paused queues can only be cleared

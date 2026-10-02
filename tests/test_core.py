@@ -42,6 +42,8 @@ class Addresses(unittest.TestCase):
         self.assertEqual(address.resolve("shared:2.1/helper", refs, "n").instance, "x2")
         self.assertEqual(address.resolve("codex#x9ab", refs, "n").instance, "x9abcdef")
         self.assertEqual(address.resolve("s1@n", refs, "n", aliases={"s1": "solo"}).instance, "c1")
+        refs[0].title = "solo-3a"
+        self.assertEqual(address.resolve("solo-3a", refs, "n").instance, "c1")
         for text, code, word in (("shared", USAGE, "ambiguous"), ("nope", USAGE, "no agent"), ("solo@other", NO_INBOX, "not this machine")):
             with self.assertRaises(LinkError) as c:
                 address.resolve(text, refs, "n")

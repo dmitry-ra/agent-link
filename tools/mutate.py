@@ -21,6 +21,8 @@ MUTANTS = [
      "    if len(cands) == 1:\n        return cands[0]", "    if cands:\n        return cands[0]"),
     ("address: shared session not qualified", "agentlink/address.py",
      "shared = len(per_session[r.session]) > 1", "shared = False"),
+    ("address: program session name not accepted", "agentlink/address.py",
+     "cands = [r for r in refs if r.title == a.session and not r.sub]", "cands = []"),
     ("envelope: hop limit not enforced", "agentlink/envelope.py",
      "    if hops > hop_limit:", "    if False:"),
     ("envelope: conversation not carried", "agentlink/envelope.py",

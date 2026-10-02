@@ -86,6 +86,9 @@ def resolve(text, refs, node, aliases=None):
     else:
         cands = [r for r in refs if r.session == a.session and r.sub == a.sub
                  and (not a.position or r.position == a.position)]
+    if not cands and not a.kind and not a.position and not a.sub:
+        # The agent program's own session name (e.g. Claude Code's "homelab-3a") also works.
+        cands = [r for r in refs if r.title == a.session and not r.sub]
     if len(cands) == 1:
         return cands[0]
     if not cands:

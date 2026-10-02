@@ -89,7 +89,7 @@ def show(cmd, r):
         rc = r["receipt"]
         line = f"{rc['status']}: {rc['to']} (instance {rc['instance'][:13]}) message {rc['message_id']}"
         print(line if r["code"] == 0 or cmd == "send" else line, file=sys.stderr if cmd == "ask" else sys.stdout)
-        if rc["text"] and rc["text"] not in ("queued", ""):
+        if rc["text"] and rc["text"] not in ("queued", "delivered", ""):
             print(f"  {rc['text']}", file=sys.stderr)
         if cmd == "ask":
             if r["code"] == 0:
