@@ -73,10 +73,13 @@ agent-link doctor
 ## Let the agents run it
 
 Agents call `agent-link` through their shell tool, so each agent program has to be allowed to run
-it without asking every time.
+it. The rules below match the command `agent-link ...`, so put it on PATH with `install.sh`
+rather than calling `python3 bin/agent-link`.
 
-- **Claude Code**: allow the command in `~/.claude/settings.json` (or a project's
-  `.claude/settings.json`). Without this, Claude asks before every call.
+- **Claude Code**: add the command to the `allow` list in `~/.claude/settings.json` (or a
+  project's `.claude/settings.json`), next to what is already there. Without it, Claude asks
+  before every call. Checked with Claude Code's Bash sandbox off; with that sandbox on, its
+  socket restrictions apply to agent-link too.
 
   ```json
   { "permissions": { "allow": ["Bash(agent-link:*)"] } }
@@ -89,10 +92,13 @@ it without asking every time.
   prefix_rule(pattern=["agent-link"], decision="allow")
   ```
 
-  This is required, not only convenient. agent-link reads other processes and their sockets,
-  which Codex's sandbox hides: run inside the sandbox, it finds no agents at all (`list` prints
-  nothing, `send` answers "known addresses: none"). A command allowed by a rule runs outside the
-  sandbox.
+  In Codex's sandbox (checked with `sandbox_mode = "workspace-write"`) this rule is required:
+  agent-link reads other processes and their sockets, which the sandbox hides, so without the
+  rule it finds no agents at all (`list` prints nothing, `send` answers "known addresses:
+  none"). A command allowed by a rule runs outside the sandbox. With `danger-full-access` nothing
+  is hidden.
+
+To check, ask each agent to run `agent-link list`: it should show the other agents.
 
 A new Codex session can be addressed only after its first message: Codex writes the thread to
 disk then. Start it with `integrations/codex-tui.sh` (see Requirements) and type anything first.
