@@ -36,7 +36,7 @@ changed.
 
 | program | versions checked | notes |
 |---|---|---|
-| Claude Code | 2.1.284, 2.1.285 | messages need the session's inbox socket (`messagingSocketPath` in its session registry); `agent-link doctor` shows whether your version has it |
+| Claude Code | 2.1.284, 2.1.285, 2.1.287 | messages need the session's inbox socket (`messagingSocketPath` in its session registry); `agent-link doctor` shows whether your version has it |
 | Codex CLI | 0.160.0 | start the terminal UI with `integrations/codex-tui.sh` (or set the two variables it sets) so its pane can be addressed |
 
 ## Install
@@ -64,6 +64,33 @@ Then check that your agent programs look as expected:
 ```
 agent-link doctor
 ```
+
+## Let the agents run it
+
+Agents call `agent-link` through their shell tool, so each agent program has to be allowed to run
+it without asking every time.
+
+- **Claude Code**: allow the command in `~/.claude/settings.json` (or a project's
+  `.claude/settings.json`). Without this, Claude asks before every call.
+
+  ```json
+  { "permissions": { "allow": ["Bash(agent-link:*)"] } }
+  ```
+
+- **Codex CLI**: add a rule to a rules file such as `~/.codex/rules/default.rules`, then restart
+  Codex (it reads rules at start):
+
+  ```
+  prefix_rule(pattern=["agent-link"], decision="allow")
+  ```
+
+  This is required, not only convenient. agent-link reads other processes and their sockets,
+  which Codex's sandbox hides: run inside the sandbox, it finds no agents at all (`list` prints
+  nothing, `send` answers "known addresses: none"). A command allowed by a rule runs outside the
+  sandbox.
+
+A new Codex session can be addressed only after its first message: Codex writes the thread to
+disk then. Start it with `integrations/codex-tui.sh` (see Requirements) and type anything first.
 
 ## Configuration
 
