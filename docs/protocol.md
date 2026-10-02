@@ -22,6 +22,9 @@ Every response has `protocol`, `ok`, `code`, `status`; failures add `error`.
 An agent object: `kind`, `node`, `instance`, `session`, `position`, `pane_id`, `sub`, `parent`,
 `state`, `cwd`, `title`, `can_receive`, `note`, `address`.
 
+`pane_id` is opaque: it identifies a pane uniquely on the machine, but its format belongs to the
+multiplexer provider and may change. Do not pass it to the multiplexer yourself.
+
 `state` is one of `idle`, `busy`, `paused`, `awaiting-approval`, `error`, `unknown`, or a raw
 state string reported by the agent program.
 

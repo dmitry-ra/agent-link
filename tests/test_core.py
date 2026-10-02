@@ -44,6 +44,10 @@ class Addresses(unittest.TestCase):
         self.assertEqual(address.resolve("s1@n", refs, "n", aliases={"s1": "solo"}).instance, "c1")
         refs[0].title = "solo-3a"
         self.assertEqual(address.resolve("solo-3a", refs, "n").instance, "c1")
+        twins = address.assign([ref("claude", "aaaa1111", "0", "0.0"), ref("codex", "bbbb2222", "0", "0.0")])
+        self.assertEqual([r.address for r in twins], ["claude#aaaa1111", "codex#bbbb2222"])
+        for r in twins:   # two tmux servers, both with session "0": every address leads back
+            self.assertIs(address.resolve(r.address, twins, "n"), r)
         for text, code, word in (("shared", USAGE, "ambiguous"), ("nope", USAGE, "no agent"), ("solo@other", NO_INBOX, "not this machine")):
             with self.assertRaises(LinkError) as c:
                 address.resolve(text, refs, "n")

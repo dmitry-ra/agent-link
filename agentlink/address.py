@@ -59,6 +59,15 @@ def assign(refs):
             r.address = f"{r.session}:{r.position}" if shared else r.session
         else:
             r.address = f"{r.kind}#{r.instance[:8]}"
+    # Equal session names in two tmux servers (each server's first session is "0") would give
+    # two agents one address; such agents are named by kind and id instead.
+    groups = {}
+    for r in top:
+        groups.setdefault(r.address, []).append(r)
+    for same in groups.values():
+        if len(same) > 1:
+            for r in same:
+                r.address = f"{r.kind}#{r.instance[:8]}"
     by_instance = {r.instance: r for r in top}
     for r in refs:
         if r.sub:
