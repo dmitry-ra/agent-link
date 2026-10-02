@@ -290,7 +290,8 @@ class CodexCli(Adapter):
                 parent = next(r for r in refs if r.instance == s["parent"])
                 refs.append(AgentRef(kind=self.kind, node=ctx.node, instance=tid, sub=s["agent_path"].removeprefix("/root/"),
                                      parent=s["parent"], session=parent.session, position=parent.position,
-                                     pane_id=parent.pane_id, state=s["state"], cwd=s["cwd"], note=s["error"]))
+                                     pane_id=parent.pane_id, state=s["state"], cwd=s["cwd"], note=s["error"],
+                                     private={"pid": parent.private.get("pid")}))
             elif self.include_all and not s["parent"]:
                 refs.append(AgentRef(kind=self.kind, node=ctx.node, instance=tid, state=s["state"], cwd=s["cwd"],
                                      title=names.get(tid, ""), note="not shown in any pane"))

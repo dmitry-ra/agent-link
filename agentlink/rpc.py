@@ -34,14 +34,19 @@ def agents(ctx, adapter_list):
 def whoami(ctx, adapter_list, refs, pid=None, env=None):
     pid = pid or os.getpid()
     env = env if env is not None else dict(os.environ)
-    for a in sorted(adapter_list, key=lambda a: a.kind != "codex"):   # an explicit thread id wins
-        me = a.whoami(ctx, pid, env)
-        if me:
-            for r in refs:
-                if r.kind == me.kind and r.instance == me.instance:
-                    return r
-            address.assign([me])
-            return me
+    # Agents nest (Pi started from Claude Code, Claude Code from Codex) and environment variables
+    # are inherited, so several adapters may claim this process: the nearest agent process wins.
+    # Ties (no known process) go to Codex, whose thread id is explicit.
+    anc = ctx.table.ancestors(pid)
+    found = [me for me in (a.whoami(ctx, pid, env) for a in sorted(adapter_list, key=lambda a: a.kind != "codex")) if me]
+    if found:
+        me = min(found, key=lambda r: anc.index(str(r.private.get("pid"))) if str(r.private.get("pid")) in anc
+                 else len(anc))
+        for r in refs:
+            if r.kind == me.kind and r.instance == me.instance:
+                return r
+        address.assign([me])
+        return me
     pane = multiplexers.pane_of(pid, ctx.panes, ctx.table)
     me = AgentRef(kind="human", node=ctx.node, instance=str(pid), session=pane.session if pane else "",
                   position=pane.position if pane else "", can_receive=False,

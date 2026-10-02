@@ -105,7 +105,8 @@ class CodexCliAdapter(unittest.TestCase):
     def test_whoami_by_thread_id(self):
         p1, p2 = self.tui([tui_marker("new_session", "2026-01-01T00:01:00.000Z"), tui_turn("cid-2")])
         with p1, p2, mock.patch.object(cx, "RECENT", 10 ** 10):
-            self.assertEqual(self.a.whoami(self.ctx, "1", {"CODEX_THREAD_ID": T3}).sub, "helper")
+            helper = self.a.whoami(self.ctx, "1", {"CODEX_THREAD_ID": T3})
+            self.assertEqual((helper.sub, helper.private["pid"]), ("helper", "201"))   # runs in its parent's process
             self.assertEqual(self.a.whoami(self.ctx, "1", {}), None)
 
     def test_send_queues_and_reports_pause(self):

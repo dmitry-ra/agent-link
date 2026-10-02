@@ -1,6 +1,8 @@
 import unittest
 
-from agentlink import address, envelope
+from agentlink import address, envelope, rpc
+from agentlink.adapters import Adapter, Context
+from agentlink.platform.linux import ProcessTable
 from agentlink.model import NO_INBOX, REFUSED, USAGE, AgentRef, LinkError
 
 
@@ -94,6 +96,41 @@ class Envelopes(unittest.TestCase):
         self.assertIn("\nreply: WAITING", text)
         self.assertTrue(envelope.parse(text).waiting)
         self.assertFalse(envelope.parse(envelope.render(envelope.make("a@n", "claude", "b@n", "q"))).waiting)
+
+
+class Claims(Adapter):
+    """An adapter that claims every process for one agent, as an inherited variable would."""
+
+    def __init__(self, kind, pid=None):
+        self.kind, self.pid = kind, pid
+
+    def whoami(self, ctx, pid, env):
+        return AgentRef(kind=self.kind, node="n", instance=f"{self.kind}-1",
+                        private={"pid": self.pid} if self.pid else {})
+
+
+class WhoAmI(unittest.TestCase):
+    # codex 201 -> claude 202 -> pi 203 -> bash 204 -> agent-link 205
+    table = ProcessTable([("1", "0", "init"), ("201", "1", "codex"), ("202", "201", "claude"),
+                          ("203", "202", "pi"), ("204", "203", "bash"), ("205", "204", "agent-link")])
+
+    def who(self, pid, *adapters):
+        return rpc.whoami(Context("n", self.table, []), list(adapters), [], pid=pid, env={}).kind
+
+    def test_nearest_agent_process_wins(self):
+        cases = [
+            ("pi started from claude started from codex", "205", ["codex", "claude", "pi"], "pi"),
+            ("claude started from codex", "202", ["codex", "claude"], "claude"),
+            ("codex alone", "205", ["codex"], "codex"),
+        ]
+        pids = {"codex": "201", "claude": "202", "pi": "203"}
+        for name, pid, kinds, want in cases:
+            with self.subTest(name):
+                self.assertEqual(self.who(pid, *[Claims(k, pids[k]) for k in kinds]), want)
+
+    def test_unknown_process_loses_and_ties_go_to_codex(self):
+        self.assertEqual(self.who("205", Claims("codex"), Claims("pi", "203")), "pi")
+        self.assertEqual(self.who("205", Claims("pi"), Claims("codex")), "codex")
 
 
 if __name__ == "__main__":
