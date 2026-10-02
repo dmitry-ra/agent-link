@@ -34,7 +34,11 @@ class Adapter:
         return []
 
     def whoami(self, ctx, pid, env):
-        """The AgentRef of the agent this process runs inside, or None."""
+        """The AgentRef of the agent this process runs inside, or None.
+
+        Put the agent's own process id in private["pid"] when it is known: when several adapters
+        claim the process, the one whose agent process is the nearest ancestor wins.
+        """
         return None
 
     def read(self, ctx, ref, limit):

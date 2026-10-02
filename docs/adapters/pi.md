@@ -220,9 +220,5 @@ Loaded twice (both ways at once), the second copy stands down.
 
 ## Limits
 
-- `whoami` asks the adapters in a fixed order, not by nearest ancestor: a command run by Pi that
-  was itself started from a Claude Code session is taken for the Claude Code session, and one
-  started from Codex is taken for Codex, because Pi passes the inherited `CODEX_THREAD_ID` on to
-  its commands.
 - A message queued while Pi is busy lives in Pi's memory until it runs; if Pi exits first it is
   lost (`ask` reports that Pi exited).
