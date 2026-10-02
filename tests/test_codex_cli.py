@@ -52,6 +52,17 @@ class CodexCliAdapter(unittest.TestCase):
                                tui_marker("new_session", "2026-01-01T00:01:01.000Z")])
         self.assertEqual([r.instance for r in refs if not r.sub], [T2])
 
+    def test_resume_binds_by_settings_applied_and_refuses_ambiguity(self):
+        resumed = [{"type": "event_msg", "timestamp": "2026-01-01T09:00:00.500Z",
+                    "payload": {"type": "thread_settings_applied", "thread_id": T1}}]
+        self.home.rollout(T1, [cx_meta(T1, "2026-01-01T00:00:00.000Z"), *cx_msg("user", "first", "cid-1"),
+                               cx_ev("task_complete"), *resumed])
+        self.assertEqual([r.instance for r in self.instances([tui_marker("session_start", "2026-01-01T09:00:00.000Z")])
+                          if not r.sub], [T1])
+        self.home.rollout(T2, [cx_meta(T2, "2026-01-01T00:01:00.000Z"), *resumed])
+        refs = self.instances([tui_marker("session_start", "2026-01-01T09:00:00.000Z")])
+        self.assertEqual([r.can_receive for r in refs if not r.sub], [False])
+
     def test_unbound_tui_is_listed_but_cannot_receive(self):
         p1, p2 = mock.patch.object(self.a, "tui_pids", return_value={"%2": ("201", {})}), mock.patch("agentlink.multiplexers.screen", return_value="")
         with p1, p2:

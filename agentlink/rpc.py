@@ -105,7 +105,7 @@ def _handle(req):
         raise LinkError(USAGE, "empty message")
     env_ = envelope.make(f"{me.address}@{ctx.node}", me.kind, f"{target.address}@{ctx.node}", text,
                          conversation=req.get("conversation"), hops=int(req.get("hops", 0)),
-                         hop_limit=ctx.hop_limit, can_reply=me.can_receive)
+                         hop_limit=ctx.hop_limit, can_reply=me.can_receive, waiting=(op == "ask"))
     receipt = a.send(ctx, target, envelope.render(env_))
     receipt.to, receipt.message_id = target.address, env_.message_id
     out = {**base, "ok": receipt.code == OK, "code": receipt.code, "status": CODE_NAMES.get(receipt.code),

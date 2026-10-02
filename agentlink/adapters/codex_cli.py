@@ -11,6 +11,8 @@ Facts it relies on (Codex 0.160; undocumented, checked by doctor()):
     TUI starts with CODEX_TUI_RECORD_SESSION=1 and CODEX_TUI_SESSION_LOG_PATH=<file>
     (integrations/codex-tui.sh). The log marks session_start / new_session with timestamps and
     every typed turn with client_user_message_id, which the thread rollout stores as client_id.
+  - `resume` writes only session_start to the TUI log; the daemon then appends
+    thread_settings_applied to the resumed thread at that moment, which identifies it.
   - A new TUI holds a thread in the daemon, but its rollout file appears only with the first
     message (its name still carries the start time), so an empty TUI is not addressable yet.
   - Approval dialogs are not in the rollout, only on the pane screen. An interrupted turn pauses
@@ -223,16 +225,26 @@ class CodexCli(Adapter):
                         return tid
                 except OSError:
                     continue
-        # No typed turn yet in this thread: the rollout started at the marker time.
-        best = None
+        # No typed turn yet in this thread. A new thread (start, /new) has session_meta at the
+        # marker time; a resumed one gets thread_settings_applied at that time. Bind only when
+        # exactly one thread matches: a coincidence with another thread's turn stays unbound.
+        found = set()
         for _, tid, f in fresh:
-            recs = records(f)[:3]
-            meta = next((r.get("payload") for r in recs if r.get("type") == "session_meta" and (r.get("payload") or {}).get("id") == tid), None)
-            t = parse_ts((meta or {}).get("timestamp", ""))
-            if t is not None and abs(t - marker) <= 3 and not summarize(tid, recs)["parent"]:
-                if best is None or abs(t - marker) < best[0]:
-                    best = (abs(t - marker), tid)
-        return best[1] if best else None
+            for r in records(f):
+                t, p = r.get("type"), r.get("payload") or {}
+                if t == "session_meta" and p.get("id") == tid:
+                    src = p.get("source")
+                    if isinstance(src, dict) and src.get("subagent"):
+                        break
+                    when = parse_ts(p.get("timestamp", ""))
+                elif t == "event_msg" and p.get("type") == "thread_settings_applied":
+                    when = parse_ts(r.get("timestamp", ""))
+                else:
+                    continue
+                if when is not None and abs(when - marker) <= 3:
+                    found.add(tid)
+                    break
+        return found.pop() if len(found) == 1 else None
 
     def tui_pids(self, ctx):
         """{pane_id: (pid, env)} for panes running a Codex TUI."""

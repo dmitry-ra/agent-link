@@ -7,6 +7,9 @@
     ---
     <body>
 
+When the sender waits for the answer (`ask`), the reply line says so instead: the recipient
+just answers in its normal output, which `ask` reads at the end of the turn.
+
 The sender address is computed by agent-link, not typed by a model. The conversation id and
 hop counter travel through replies; past the hop limit a message is refused, which stops two
 agents from answering each other forever.
@@ -20,6 +23,7 @@ from .model import REFUSED, LinkError
 
 HEAD = "[agent-link]"
 SEPARATOR = "---"
+WAITING = "reply: just answer in your normal output; the sender is waiting for your turn to end, no agent-link send needed"
 HEAD_RE = re.compile(r"^\[agent-link\] from (?P<sender>\S+) \((?P<kind>[^)]*)\) to (?P<to>\S+)$")
 META_RE = re.compile(r"^id (?P<id>m-[0-9a-f]+)\s+conversation (?P<conv>c-[0-9a-f]+)\s+hops (?P<hops>\d+)$")
 
@@ -33,6 +37,7 @@ class Envelope:
     conversation: str
     hops: int
     can_reply: bool = True
+    waiting: bool = False
     body: str = ""
 
 
@@ -40,18 +45,22 @@ def new_id(prefix):
     return f"{prefix}-{secrets.token_hex(4)}"
 
 
-def make(sender, sender_kind, to, body, conversation=None, hops=0, hop_limit=10, can_reply=True):
+def make(sender, sender_kind, to, body, conversation=None, hops=0, hop_limit=10, can_reply=True, waiting=False):
     """Envelope for an outgoing message; hops is what the incoming envelope carried (0 for a new one)."""
     hops = int(hops) + 1
     if hops > hop_limit:
         raise LinkError(REFUSED, f"hop limit reached ({hop_limit}) in conversation {conversation}: "
                                  "agents have been answering each other too long; stop or ask your user")
-    return Envelope(sender, sender_kind, to, new_id("m"), conversation or new_id("c"), hops, can_reply, body)
+    return Envelope(sender, sender_kind, to, new_id("m"), conversation or new_id("c"), hops, can_reply, waiting, body)
 
 
 def render(e):
-    reply = (f"reply: agent-link send {e.sender} --conversation {e.conversation} --hops {e.hops} -"
-             if e.can_reply else "reply: not possible, the sender cannot receive messages")
+    if e.waiting:
+        reply = f"{WAITING} (later messages: agent-link send {e.sender} --conversation {e.conversation} --hops {e.hops} -)"
+    elif e.can_reply:
+        reply = f"reply: agent-link send {e.sender} --conversation {e.conversation} --hops {e.hops} -"
+    else:
+        reply = "reply: not possible, the sender cannot receive messages"
     return "\n".join([
         f"{HEAD} from {e.sender} ({e.sender_kind}) to {e.to}",
         f"id {e.message_id}  conversation {e.conversation}  hops {e.hops}",
@@ -76,5 +85,6 @@ def parse(text):
         body = rest[rest.index(SEPARATOR) + 1:] if SEPARATOR in rest else []
         return Envelope(m.group("sender"), m.group("kind"), m.group("to"), meta.group("id"),
                         meta.group("conv"), int(meta.group("hops")),
-                        not any(l.startswith("reply: not possible") for l in rest[:3]), "\n".join(body))
+                        not any(l.startswith("reply: not possible") for l in rest[:3]),
+                        any(l.startswith(WAITING) for l in rest[:3]), "\n".join(body))
     return None
