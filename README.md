@@ -137,8 +137,9 @@ when it appears in the recipient's transcript (`pending`, then `running`).
   sending model. Whether an agent acts on a peer's request is decided by that agent's own rules.
 - **Prompt injection still applies.** A message from another agent is untrusted text, like a web
   page. Do not let agents act on it beyond what their rules allow.
-- **Loops are bounded.** A hop counter travels with each conversation; past the limit (default
-  10) messages are refused.
+- **Loops are bounded within a conversation.** A hop counter travels with each conversation;
+  past the limit (default 10) messages are refused. An agent that forwards a message as a new
+  send starts a new count, so a chain of forwards is not bounded yet.
 - **Secrets.** agent-link never reads Claude Code's `*.key` files. The Codex session log it relies
   on contains what you type into Codex; `integrations/codex-tui.sh` keeps it in a private
   directory. The Pi extension listens on a unix socket (mode 0600, in a 0700 directory of the
