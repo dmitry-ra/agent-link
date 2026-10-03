@@ -9,7 +9,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from agentlink.adapters import pi
+from agentlink.adapters import Context, pi
+from agentlink.platform.linux import ProcessTable
 from agentlink.model import AWAITING_APPROVAL, NO_INBOX, OK, REFUSED, TIMEOUT, TURN_FAILED, USAGE
 from tests.helpers import (P1, P3, PiHome, pi_assistant, pi_context, pi_inbox, pi_settled, pi_tool_result, pi_user)
 
@@ -62,6 +63,13 @@ class PiAdapter(unittest.TestCase):
                          [(P1, "pi-1", True, "n401"), (P3, "pi-1", False, "n404"), ("pid-501", "pi-2", False, "")])
         self.assertIn("print mode", refs[1].note)
         self.assertEqual(refs[2].note, pi.NO_EXTENSION)
+
+    def test_doctor_absent_only_without_any_trace_of_pi(self):
+        nowhere = pi.Pi(registry_dir=self.home.root / "nowhere")
+        bare = Context("node1", ProcessTable([("1", "0", "init")]), [])
+        with mock.patch("shutil.which", return_value=None):
+            self.assertEqual([ok for ok, _ in nowhere.doctor(bare)], [None])
+            self.assertNotIn(None, [ok for ok, _ in nowhere.doctor(self.ctx)])   # pi processes run here
 
     def test_shared_registry_directory_is_ignored(self):
         self.home.registry.chmod(0o755)

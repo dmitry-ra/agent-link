@@ -1,7 +1,8 @@
 import unittest
 from unittest import mock
 
-from agentlink.adapters import claude_code as cc
+from agentlink.adapters import Context, claude_code as cc
+from agentlink.platform.linux import ProcessTable
 from agentlink.model import OK, TIMEOUT, TURN_FAILED
 from tests.helpers import S1, ClaudeHome, claude_assistant, claude_enqueue, claude_user, context
 
@@ -56,6 +57,15 @@ class ClaudeCodeAdapter(unittest.TestCase):
                  claude_assistant("ANSWER", msg_id="msg_1"), {"type": "system"}]
         self.assertEqual(cc.answer_after(lines(split), "m-xyz"), ("done", "ANSWER"))
         self.assertEqual(cc.answer_after(lines(split[:2]), "m-xyz")[0], "running")
+
+    def test_doctor_absent_only_without_any_trace_of_claude_code(self):
+        a = cc.ClaudeCode(sessions_dir=self.home.root / "nowhere", projects_dir=self.home.projects)
+        bare = Context("node1", ProcessTable([("1", "0", "init"), ("300", "1", "bash")]), [])
+        with mock.patch("shutil.which", return_value=None):
+            self.assertEqual([ok for ok, _ in a.doctor(bare)], [None])
+            # The process runs (101 is claude) but its registry is gone: a moved directory, a fault.
+            checks = a.doctor(self.ctx)
+            self.assertEqual(([ok for ok, _ in checks], "not found, yet" in checks[0][1]), ([False], True))
 
     def test_doctor_names_an_unknown_status_value(self):
         self.home.add_session(101, S1, "project-1:@0.%1", socket="s", status="compacting")

@@ -15,7 +15,9 @@ not change. Steps:
 3. **Implement** `instances`, `whoami`, and whatever the flags promise: `read`, `send`,
    `await_reply`. Return codes from `agentlink/model.py`. Put adapter-only data in
    `AgentRef.private`, never in printed fields.
-4. **`doctor`**: one check per undocumented format you rely on, worded so a failure says what
+4. **`doctor`**: when the program is not on this machine at all (`program_present()` is false and its data
+   directory is missing), return a single `(None, text)` check: it is shown as `skip`, not as a failure.
+   Otherwise, one check per undocumented format you rely on, worded so a failure says what
    changed.
 5. **Register** the class in `registry()` in `agentlink/adapters/__init__.py`.
 6. **Fixtures and tests**: synthetic files shaped like the real ones in `tests/fixtures/<kind>/`

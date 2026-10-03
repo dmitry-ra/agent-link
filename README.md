@@ -40,7 +40,8 @@ change them. `agent-link doctor` checks what it relies on and says what changed.
 
 - Linux (process information comes from `/proc` and `ps`)
 - Python 3.11 or newer, standard library only
-- tmux, with the agents running in tmux sessions (the session name is the agent's address)
+- tmux, with the agents running in tmux sessions (the session name is the agent's address). A pane
+  is listed only when it runs a supported program; a pane with a plain shell is not an agent
 - the agents on the same machine; agents on other machines and VMs are planned, see
   [docs/protocol.md](docs/protocol.md)
 - the agent programs themselves:

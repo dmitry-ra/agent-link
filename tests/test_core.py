@@ -1,8 +1,12 @@
+import contextlib
+import io
 import random
 import unittest
+from unittest import mock
 
-from agentlink import address, envelope, rpc
+from agentlink import address, cli, envelope, rpc
 from agentlink.adapters import Adapter, Context
+from agentlink.multiplexers import Pane
 from agentlink.platform.linux import ProcessTable
 from agentlink.model import NO_INBOX, REFUSED, TIMEOUT, USAGE, AgentRef, LinkError
 
@@ -146,6 +150,57 @@ class Claims(Adapter):
     def whoami(self, ctx, pid, env):
         return AgentRef(kind=self.kind, node="n", instance=f"{self.kind}-1",
                         private={"pid": self.pid} if self.pid else {})
+
+
+class FirstRun(unittest.TestCase):
+    def test_absent_program_is_not_a_failure(self):
+        checks, ok = rpc.doctor_checks([("", True, "config"), ("claude", None, "not found here")])
+        self.assertEqual(([c["state"] for c in checks], [c["ok"] for c in checks], ok), (["ok", "absent"], [True, True], True))
+        checks, ok = rpc.doctor_checks([("claude", None, "not found here"), ("codex", False, "codex on PATH")])
+        self.assertEqual(([c["state"] for c in checks], checks[1]["text"], ok), (["absent", "fail"], "codex: codex on PATH", False))
+
+    def test_empty_list_and_skipped_checks_are_spelled_out(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            cli.show("list", {"ok": True, "me": "x", "panes": 1, "kinds": ["claude", "codex"], "agents": []})
+            cli.show("doctor", {"ok": True, "checks": [{"ok": True, "state": "absent", "text": "claude: not found here"}]})
+        self.assertEqual(out.getvalue().splitlines(),
+                         ["0 agents (1 multiplexer pane seen, none runs a supported program: claude, codex)",
+                          "skip claude: not found here"])
+
+
+class RpcDoctorAndList(unittest.TestCase):
+    class Reports(Adapter):
+        def __init__(self, kind, checks):
+            self.kind, self.checks = kind, checks
+
+        def doctor(self, ctx):
+            return self.checks
+
+    def run_op(self, op, adapters, panes, tmux="/usr/bin/tmux"):
+        cfg = {"node": "n", "hop_limit": 10, "aliases": {}, "nodes": {}, "path": "/nonexistent/config.toml"}
+        ctx = Context("n", ProcessTable([("1", "0", "init")]), panes)
+        with mock.patch.object(rpc.config, "load", return_value=cfg), mock.patch.object(rpc, "context", return_value=ctx), \
+                mock.patch.object(rpc, "adapters", return_value=adapters), mock.patch.object(rpc.shutil, "which", return_value=tmux):
+            return rpc.handle({"op": op})
+
+    def test_doctor_exit_code_follows_failures_not_absences(self):
+        pane = [Pane("tmux", "s", "1.1", "%1", "1", "/w")]
+        absent = [self.Reports("claude", [(None, "not found here")])]
+        cases = [
+            ("only absences", absent, pane, "/usr/bin/tmux", (True, 0)),
+            ("a present program fails", absent + [self.Reports("codex", [(False, "codex on PATH")])], pane, "/usr/bin/tmux", (False, 3)),
+            ("no panes yet", absent, [], "/usr/bin/tmux", (True, 0)),
+            ("tmux missing", absent, [], None, (False, 3)),
+        ]
+        for name, adapters, panes, tmux, want in cases:
+            with self.subTest(name):
+                r = self.run_op("doctor", adapters, panes, tmux)
+                self.assertEqual((r["ok"], r["code"]), want)
+
+    def test_list_reports_panes_and_kinds(self):
+        r = self.run_op("list", [self.Reports("claude", []), self.Reports("pi", [])], [Pane("tmux", "s", "1.1", "%1", "1", "/w")])
+        self.assertEqual((r["agents"], r["panes"], r["kinds"]), ([], 1, ["claude", "pi"]))
 
 
 class TimeoutText(unittest.TestCase):
