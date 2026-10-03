@@ -118,6 +118,10 @@ There are two kinds of `reply:` line; read it before answering:
 Exit code 0 from `ask` means the recipient's turn ended; the printed text is whatever it said,
 which can be a refusal. Read it.
 
+When you ask another agent to review or check something, ask for evidence, not a verdict: the
+commands it ran and their output. Check the key point yourself before you act on it, and when in
+doubt, `agent-link read` shows what the other agent actually did.
+
 ## agent-link and built-in agent messaging
 
 Claude Code has built-in ListAgents/SendMessage between Claude Code sessions. agent-link reaches
