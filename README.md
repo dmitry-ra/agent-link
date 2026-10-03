@@ -30,15 +30,19 @@ Agents using the tool: read [AGENTS.md](AGENTS.md), or run `agent-link guide`.
 
 agent-link is an independent project. It is not affiliated with, endorsed by or supported by
 Anthropic, OpenAI or the authors of Pi. It works by reading files and using local interfaces that
-Claude Code and Codex CLI keep for themselves, and through an extension for Pi; none of them is a
-documented public API, and any release of those programs may change them. `agent-link doctor` checks what it relies on and says what
-changed.
+Claude Code and Codex CLI keep for themselves, and through an extension for Pi. Claude Code
+documents its session inbox socket for scripts that post into their own session, but not the
+format agent-link relies on to message another session, nor its session registry and
+transcripts; the Codex files are not documented either. Any release of those programs may
+change them. `agent-link doctor` checks what it relies on and says what changed.
 
 ## Requirements
 
 - Linux (process information comes from `/proc` and `ps`)
 - Python 3.11 or newer, standard library only
 - tmux, with the agents running in tmux sessions (the session name is the agent's address)
+- the agents on the same machine; agents on other machines and VMs are planned, see
+  [docs/protocol.md](docs/protocol.md)
 - the agent programs themselves:
 
 | program | versions checked | notes |
@@ -115,6 +119,18 @@ disk then. Start it with `integrations/codex-tui.sh` (see Requirements) and type
 Optional: `~/.config/agent-link/config.toml` (or `$AGENT_LINK_CONFIG`) with `node` (this
 machine's name in addresses), `hop_limit` and `[aliases]`. See `agentlink/config.py`.
 
+## What "delivered" means
+
+Each program offers a different receipt, so exit code 0 from `send` proves a different thing
+for each. None of them proves that the model has read the message: `agent-link status` shows
+when it appears in the recipient's transcript (`pending`, then `running`).
+
+| recipient | exit 0 proves | reported apart from success |
+|---|---|---|
+| Pi | the extension took the line and queued it in Pi, which answered `ok` | refused while Pi compacts (8); no answer within 5 s: "delivery unknown" (3) |
+| Claude Code | only that no refusal arrived within 2 s: Claude Code sends no receipt for a delivered message | held for approval, dropped or refused by the receiver, or a socket error (8); too large (2); no inbox socket (3) |
+| Codex CLI | `codex queue` exited 0: the message is queued on the thread | queue paused after an interrupted turn (7); `codex queue` failed (3) |
+
 ## Security model
 
 - **Trust boundary: one user account.** agent-link only sees and talks to agents of the user it
@@ -125,12 +141,17 @@ machine's name in addresses), `hop_limit` and `[aliases]`. See `agentlink/config
   sending model. Whether an agent acts on a peer's request is decided by that agent's own rules.
 - **Prompt injection still applies.** A message from another agent is untrusted text, like a web
   page. Do not let agents act on it beyond what their rules allow.
-- **Loops are bounded.** A hop counter travels with each conversation; past the limit (default
-  10) messages are refused.
+- **Loops are bounded within a conversation.** A hop counter travels with each conversation;
+  past the limit (default 10) messages are refused. An agent that forwards a message as a new
+  send starts a new count, so a chain of forwards is not bounded yet.
 - **Secrets.** agent-link never reads Claude Code's `*.key` files. The Codex session log it relies
   on contains what you type into Codex; `integrations/codex-tui.sh` keeps it in a private
   directory. The Pi extension listens on a unix socket (mode 0600, in a 0700 directory of the
   user), not on a network port.
+- **`read` shares whatever a conversation holds.** A token or password pasted into one agent's
+  session is readable by every other agent through `agent-link read`. The files were already
+  readable by the user; agent-link makes it one command. Do not paste secrets into agent
+  sessions that share a machine with agents you would not show them to.
 
 Report a vulnerability as described in [SECURITY.md](SECURITY.md).
 

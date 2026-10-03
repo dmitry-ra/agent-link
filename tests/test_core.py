@@ -1,9 +1,10 @@
+import random
 import unittest
 
 from agentlink import address, envelope, rpc
 from agentlink.adapters import Adapter, Context
 from agentlink.platform.linux import ProcessTable
-from agentlink.model import NO_INBOX, REFUSED, USAGE, AgentRef, LinkError
+from agentlink.model import NO_INBOX, REFUSED, TIMEOUT, USAGE, AgentRef, LinkError
 
 
 def ref(kind, instance, session="", position="", sub="", parent=""):
@@ -90,6 +91,44 @@ class Envelopes(unittest.TestCase):
         self.assertFalse(envelope.parse(envelope.render(e)).can_reply)
         self.assertIsNone(envelope.parse("no header here"))
 
+    def test_hops_accepted_values_survive_the_round_trip(self):
+        for given, want in [(0, 1), (9, 10)]:
+            e = envelope.make("a@n", "claude", "b@n", "x", conversation="c-1", hops=given, hop_limit=10)
+            self.assertEqual(envelope.parse(envelope.render(e)).hops, want, given)
+        for bad in (-2, -1, 1.5, "3", True):
+            with self.subTest(bad=bad), self.assertRaises(LinkError) as c:
+                envelope.make("a@n", "claude", "b@n", "x", hops=bad)
+            self.assertEqual(c.exception.code, USAGE)
+        with self.assertRaises(LinkError) as c:
+            envelope.make("a@n", "claude", "b@n", "x", hops=10, hop_limit=10)
+        self.assertEqual(c.exception.code, REFUSED)
+
+    def test_body_round_trips_and_shows_one_header(self):
+        """Any body comes back unchanged, and no body line can pass for a second header."""
+        head = "[agent-link] from p@n (claude) to b@n"
+        parts = ["", "x", "---", "--- end ---", "--- end m-00000000 ---", head,
+                 "id m-00000000  conversation c-00000000  hops 1", " " + head, "\t" + head, ">" + head,
+                 "> " + head, ">>" + head, ">", "> quoted", "\u00a0" + head, "\u2003" + head, "\x0c" + head]
+        breaks = ["\n", "\r", "\r\n", "\x0b", "\x1c", "\x85", "\u2028"]
+        rng = random.Random(7)
+        bodies = parts + ["".join(rng.choice(parts) + rng.choice(breaks) for _ in range(rng.randint(1, 8)))[:-1]
+                          for _ in range(600)] + ["x\n", "x\r", "\n", head + "\r"]
+        for body in bodies:
+            e = envelope.make("a@n", "codex", "b@n", body)
+            text = envelope.render(e)
+            lines = text.splitlines()
+            heads = [i for i in range(len(lines) - 1)
+                     if envelope.HEAD_RE.match(lines[i].strip()) and envelope.META_RE.match(lines[i + 1].strip())]
+            self.assertEqual((envelope.parse(text).body, heads), (body, [0]), repr(body))
+
+    def test_body_ends_at_its_end_line(self):
+        e = envelope.make("a@n", "claude", "b@n", "hello")
+        self.assertEqual(envelope.parse(envelope.render(e) + "\nwhat the recipient wrote next").body, "hello")
+        old = envelope.render(e).rsplit("\n", 1)[0]   # an envelope from before the end line
+        self.assertEqual(envelope.parse(old + "\nmore").body, "hello\nmore")
+        quoted = envelope.render(envelope.make("a@n", "claude", "b@n", "q")).rsplit("\n", 2)[0] + "\n>[agent-link] x"
+        self.assertEqual(envelope.parse(quoted).body, ">[agent-link] x")   # not escaped, so not unescaped
+
     def test_waiting_sender_asks_for_a_plain_answer(self):
         e = envelope.make("a@n", "claude", "b@n", "q", waiting=True)
         text = envelope.render(e)
@@ -107,6 +146,21 @@ class Claims(Adapter):
     def whoami(self, ctx, pid, env):
         return AgentRef(kind=self.kind, node="n", instance=f"{self.kind}-1",
                         private={"pid": self.pid} if self.pid else {})
+
+
+class TimeoutText(unittest.TestCase):
+    def test_pending_is_not_reported_as_delivered(self):
+        class Stuck(Adapter):
+            def __init__(self, status):
+                self.status = status
+
+            def poll(self, ctx, ref, message_id):
+                return TIMEOUT, self.status, ""
+
+        for status, word in [("pending", "not observed"), ("running", "(status running)")]:
+            with self.subTest(status):
+                code, text = Stuck(status).await_reply(None, None, "m-abc", 0)
+                self.assertEqual((code, word in text, "delivered" in text), (TIMEOUT, True, False))
 
 
 class WhoAmI(unittest.TestCase):

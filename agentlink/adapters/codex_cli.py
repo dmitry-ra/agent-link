@@ -31,7 +31,7 @@ from pathlib import Path
 from .. import multiplexers
 from ..model import AWAITING_APPROVAL, NO_INBOX, OK, PAUSED, TIMEOUT, TURN_FAILED, AgentRef, LinkError, Receipt
 from ..platform import environ
-from . import Adapter
+from . import Adapter, timeout_text
 
 ID_RE = re.compile(r"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$")
 TURN_END = ("task_complete", "turn_aborted")
@@ -332,6 +332,8 @@ class CodexCli(Adapter):
         return Receipt(OK, "queued", instance=ref.instance)
 
     def poll(self, ctx, ref, message_id):
+        # No liveness check here: turns run in the shared app-server, not in the TUI whose pid the
+        # ref carries, so a closed TUI does not mean the turn stopped.
         status, answers = answer_after(records(self._rollout(ref)), message_id)
         if status == "task_complete":
             return OK, "answered", answers[-1] if answers else ""
@@ -355,7 +357,7 @@ class CodexCli(Adapter):
             if status in ("answered", "failed") or (status == "blocked" and time.time() > grace):
                 return code, text
             if time.time() >= deadline:
-                return TIMEOUT, f"no answer to {message_id} within {timeout}s (status {status})"
+                return TIMEOUT, timeout_text(message_id, timeout, status)
             time.sleep(2)
 
     def doctor(self, ctx):
@@ -366,8 +368,10 @@ class CodexCli(Adapter):
         if rollouts:
             newest = max(rollouts.values(), key=lambda f: f.stat().st_mtime)
             first = records(newest)[:1]
-            ok = bool(first) and first[0].get("type") == "session_meta"
-            checks.append((ok, f"rollout format: first record is session_meta ({newest.name[:40]}...)"))
+            seen = first[0].get("type") if first else None
+            checks.append((seen == "session_meta", "rollout format: first record is session_meta"
+                                                   + ("" if seen == "session_meta" else f", found {seen!r}")
+                                                   + f" ({newest.name[:40]}...)"))
         for pane_id, (pid, env) in self.tui_pids(ctx).items():
             pane = ctx.pane_by_id[pane_id]
             has = env.get("CODEX_TUI_RECORD_SESSION") == "1" and env.get(LOG_ENV)

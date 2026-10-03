@@ -4,7 +4,7 @@ import unittest
 from unittest import mock
 
 from agentlink.adapters import codex_cli as cx
-from agentlink.model import OK, PAUSED
+from agentlink.model import OK, PAUSED, TIMEOUT
 from tests.helpers import (T1, T2, T3, CodexHome, context, cx_ev, cx_meta, cx_msg, fake_codex_on_path, tui_marker,
                            tui_turn)
 
@@ -108,6 +108,18 @@ class CodexCliAdapter(unittest.TestCase):
             helper = self.a.whoami(self.ctx, "1", {"CODEX_THREAD_ID": T3})
             self.assertEqual((helper.sub, helper.private["pid"]), ("helper", "201"))   # runs in its parent's process
             self.assertEqual(self.a.whoami(self.ctx, "1", {}), None)
+
+    def test_doctor_names_the_first_record_it_found(self):
+        with mock.patch.object(cx, "RECENT", 10 ** 10), mock.patch.object(self.a, "tui_pids", return_value={}):
+            self.home.rollout(T2, [{"type": "turn_context", "payload": {}}])
+            os.utime(self.home.day / f"rollout-2026-01-01T00-00-00-{T2}.jsonl", (2 * 10 ** 9, 2 * 10 ** 9))
+            checks = [text for ok, text in self.a.doctor(self.ctx) if not ok]
+        self.assertTrue(any("found 'turn_context'" in t for t in checks), checks)
+
+    def test_timeout_on_a_never_seen_message_says_so(self):
+        with mock.patch.object(self.a, "poll", return_value=(TIMEOUT, "pending", "")):
+            code, text = self.a.await_reply(self.ctx, None, "m-abc", 0)
+        self.assertEqual((code, "not observed" in text), (TIMEOUT, True))
 
     def test_send_queues_and_reports_pause(self):
         with tempfile.TemporaryDirectory() as tmp:

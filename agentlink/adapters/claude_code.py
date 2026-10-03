@@ -11,8 +11,9 @@ import json
 import os
 from pathlib import Path
 
-from ..model import NO_INBOX, OK, REFUSED, TIMEOUT, USAGE, AgentRef, LinkError, Receipt
+from ..model import NO_INBOX, OK, REFUSED, TIMEOUT, TURN_FAILED, USAGE, AgentRef, LinkError, Receipt
 from .. import multiplexers
+from ..platform import is_alive
 from . import Adapter
 from ._claude_inbox import deliver
 
@@ -168,9 +169,13 @@ class ClaudeCode(Adapter):
         return Receipt(code, detail or status, instance=ref.instance)
 
     def poll(self, ctx, ref, message_id):
+        pid = ref.private.get("pid")
+        alive = is_alive(pid) if pid else True   # before reading: an answer written just before exit still counts
         status, answer = answer_after(self._lines(ref), message_id)
         if status == "done":
             return OK, "answered", answer
+        if not alive:
+            return TURN_FAILED, "failed", f"Claude Code (pid {pid}) exited before the turn ended"
         return TIMEOUT, status, answer
 
     def doctor(self, ctx):
@@ -183,6 +188,11 @@ class ClaudeCode(Adapter):
             missing = [k for k in ("tmux", "messagingSocketPath", "status", "kind") if k not in d]
             checks.append((not missing, f"session {d['pid']} (v{d.get('version', '?')}): "
                                         + ("fields ok" if not missing else f"missing {missing}")))
+            if "status" in d:
+                st = d["status"]
+                # A new value breaks nothing (it is shown as is), so it is reported, not failed.
+                checks.append((True, f"session {d['pid']}: status {st!r} "
+                                     + ("known" if st in STATUS else f"is new to agent-link, shown as is; known: {sorted(STATUS)}")))
             checks.append((transcript_path(d["sessionId"], self.projects_dir) is not None,
                            f"session {d['pid']}: transcript found"))
         return checks
