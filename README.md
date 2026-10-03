@@ -143,6 +143,10 @@ when it appears in the recipient's transcript (`pending`, then `running`).
   on contains what you type into Codex; `integrations/codex-tui.sh` keeps it in a private
   directory. The Pi extension listens on a unix socket (mode 0600, in a 0700 directory of the
   user), not on a network port.
+- **`read` shares whatever a conversation holds.** A token or password pasted into one agent's
+  session is readable by every other agent through `agent-link read`. The files were already
+  readable by the user; agent-link makes it one command. Do not paste secrets into agent
+  sessions that share a machine with agents you would not show them to.
 
 Report a vulnerability as described in [SECURITY.md](SECURITY.md).
 
