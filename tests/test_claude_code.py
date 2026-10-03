@@ -59,8 +59,8 @@ class ClaudeCodeAdapter(unittest.TestCase):
 
     def test_doctor_names_an_unknown_status_value(self):
         self.home.add_session(101, S1, "project-1:@0.%1", socket="s", status="compacting")
-        checks = [text for ok, text in self.a.doctor(self.ctx) if not ok]
-        self.assertTrue(any("'compacting'" in t and "known" in t for t in checks), checks)
+        checks = [(ok, text) for ok, text in self.a.doctor(self.ctx) if "status" in text]
+        self.assertTrue(any(ok and "'compacting' is new" in t for ok, t in checks), checks)
         self.home.add_session(101, S1, "project-1:@0.%1", socket="s", status="idle")
         self.assertIn((True, "session 101: status 'idle' known"), self.a.doctor(self.ctx))
 

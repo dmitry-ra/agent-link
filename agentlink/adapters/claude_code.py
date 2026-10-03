@@ -190,8 +190,9 @@ class ClaudeCode(Adapter):
                                         + ("fields ok" if not missing else f"missing {missing}")))
             if "status" in d:
                 st = d["status"]
-                checks.append((st in STATUS, f"session {d['pid']}: status {st!r} "
-                                             + ("known" if st in STATUS else f"is new to agent-link, known: {sorted(STATUS)}")))
+                # A new value breaks nothing (it is shown as is), so it is reported, not failed.
+                checks.append((True, f"session {d['pid']}: status {st!r} "
+                                     + ("known" if st in STATUS else f"is new to agent-link, shown as is; known: {sorted(STATUS)}")))
             checks.append((transcript_path(d["sessionId"], self.projects_dir) is not None,
                            f"session {d['pid']}: transcript found"))
         return checks
