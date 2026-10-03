@@ -128,7 +128,7 @@ when it appears in the recipient's transcript (`pending`, then `running`).
 | recipient | exit 0 proves | reported apart from success |
 |---|---|---|
 | Pi | the extension took the line and queued it in Pi, which answered `ok` | refused while Pi compacts (8); no answer within 5 s: "delivery unknown" (3) |
-| Claude Code | only that no refusal arrived within 2 s: Claude Code sends no receipt for a delivered message | held for approval, dropped or refused by the receiver (8); no inbox socket (3) |
+| Claude Code | only that no refusal arrived within 2 s: Claude Code sends no receipt for a delivered message | held for approval, dropped or refused by the receiver, or a socket error (8); too large (2); no inbox socket (3) |
 | Codex CLI | `codex queue` exited 0: the message is queued on the thread | queue paused after an interrupted turn (7); `codex queue` failed (3) |
 
 ## Security model

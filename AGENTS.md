@@ -96,7 +96,8 @@ There are two kinds of `reply:` line; read it before answering:
 - `reply: agent-link send ...` - the sender is not waiting: run that command with your answer.
 - `reply: WAITING ...` - the sender used `ask` and is blocked until your turn ends: make your
   answer the last text of this turn and do not run `agent-link send`.
-- Send exactly one message per reply. Check the exit code: 0 means delivered. Never resend on
+- Send exactly one message per reply. Check the exit code: 0 means handed over to the recipient
+  (what that proves differs by program; see "What delivered means" in the README). Never resend on
   a timeout or "delivery unknown": `agent-link status ADDR MESSAGE_ID` tells whether the first
   copy arrived, and a second copy would be a second task.
 - Keep `--conversation` and `--hops` as given: they stop two agents from answering each other
