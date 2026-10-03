@@ -19,7 +19,7 @@ import re
 import secrets
 from dataclasses import dataclass
 
-from .model import REFUSED, LinkError
+from .model import REFUSED, USAGE, LinkError
 
 HEAD = "[agent-link]"
 SEPARATOR = "---"
@@ -48,7 +48,10 @@ def new_id(prefix):
 
 def make(sender, sender_kind, to, body, conversation=None, hops=0, hop_limit=10, can_reply=True, waiting=False):
     """Envelope for an outgoing message; hops is what the incoming envelope carried (0 for a new one)."""
-    hops = int(hops) + 1
+    # A negative count would render as a header parse() cannot read, and would restart the loop budget.
+    if isinstance(hops, bool) or not isinstance(hops, int) or hops < 0:
+        raise LinkError(USAGE, f"hops must be a whole number, 0 or more, got {hops!r}: copy it from the message header")
+    hops += 1
     if hops > hop_limit:
         raise LinkError(REFUSED, f"hop limit reached ({hop_limit}) in conversation {conversation}: "
                                  "agents have been answering each other too long; stop or ask your user")

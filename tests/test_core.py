@@ -90,6 +90,18 @@ class Envelopes(unittest.TestCase):
         self.assertFalse(envelope.parse(envelope.render(e)).can_reply)
         self.assertIsNone(envelope.parse("no header here"))
 
+    def test_hops_accepted_values_survive_the_round_trip(self):
+        for given, want in [(0, 1), (9, 10)]:
+            e = envelope.make("a@n", "claude", "b@n", "x", conversation="c-1", hops=given, hop_limit=10)
+            self.assertEqual(envelope.parse(envelope.render(e)).hops, want, given)
+        for bad in (-2, -1, 1.5, "3", True):
+            with self.subTest(bad=bad), self.assertRaises(LinkError) as c:
+                envelope.make("a@n", "claude", "b@n", "x", hops=bad)
+            self.assertEqual(c.exception.code, USAGE)
+        with self.assertRaises(LinkError) as c:
+            envelope.make("a@n", "claude", "b@n", "x", hops=10, hop_limit=10)
+        self.assertEqual(c.exception.code, REFUSED)
+
     def test_waiting_sender_asks_for_a_plain_answer(self):
         e = envelope.make("a@n", "claude", "b@n", "q", waiting=True)
         text = envelope.render(e)

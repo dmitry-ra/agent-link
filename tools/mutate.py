@@ -25,6 +25,8 @@ MUTANTS = [
      'steps = [r.session] if r.session else []'),
     ("address: program session name not accepted", "agentlink/address.py",
      "cands = [r for r in refs if r.title == a.session and not r.sub]", "cands = []"),
+    ("envelope: negative hops accepted", "agentlink/envelope.py",
+     "not isinstance(hops, int) or hops < 0:", "not isinstance(hops, int):"),
     ("envelope: hop limit not enforced", "agentlink/envelope.py",
      "    if hops > hop_limit:", "    if False:"),
     ("envelope: waiting sender not announced", "agentlink/envelope.py",

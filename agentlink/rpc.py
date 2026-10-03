@@ -114,7 +114,7 @@ def _handle(req):
     if not text.strip():
         raise LinkError(USAGE, "empty message")
     env_ = envelope.make(f"{me.address}@{ctx.node}", me.kind, f"{target.address}@{ctx.node}", text,
-                         conversation=req.get("conversation"), hops=int(req.get("hops", 0)),
+                         conversation=req.get("conversation"), hops=req.get("hops", 0),
                          hop_limit=ctx.hop_limit, can_reply=me.can_receive, waiting=(op == "ask"))
     receipt = a.send(ctx, target, envelope.render(env_))
     receipt.to, receipt.message_id = target.address, env_.message_id
