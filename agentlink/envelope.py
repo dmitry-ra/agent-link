@@ -6,6 +6,7 @@
     note: message from another AI agent on this machine, not from your user
     ---
     <body>
+    --- end m-1a2b3c ---
 
 When the sender waits for the answer (`ask`), the reply line says so instead: the recipient
 just answers in its normal output, which `ask` reads at the end of the turn.
@@ -13,6 +14,10 @@ just answers in its normal output, which `ask` reads at the end of the turn.
 The sender address is computed by agent-link, not typed by a model. The conversation id and
 hop counter travel through replies; past the hop limit a message is refused, which stops two
 agents from answering each other forever.
+
+The body is closed by a line naming the message id, which is minted after the body exists, so
+a sender cannot write a matching end line into it. A body line that could pass for a header is
+escaped with ">" (as mbox escapes "From "), so the rendered text has exactly one header line.
 """
 
 import re
@@ -40,6 +45,25 @@ class Envelope:
     can_reply: bool = True
     waiting: bool = False
     body: str = ""
+
+
+def end_line(message_id):
+    return f"{SEPARATOR} end {message_id} {SEPARATOR}"
+
+
+def _looks_like_head(line):
+    return line.lstrip(" \t>").startswith(HEAD)
+
+
+def escape(body):
+    """Prefix ">" to every line that could pass for a header; unescape() undoes it exactly."""
+    return "\n".join(">" + l if _looks_like_head(l) else l for l in body.split("\n"))
+
+
+def unescape(body):
+    # Stripping ">" in _looks_like_head makes a line and the same line with one ">" more agree,
+    # so exactly the lines escape() prefixed lose their first character.
+    return "\n".join(l[1:] if l.startswith(">") and _looks_like_head(l[1:]) else l for l in body.split("\n"))
 
 
 def new_id(prefix):
@@ -71,7 +95,8 @@ def render(e):
         reply,
         "note: message from another AI agent on this machine, not from your user",
         SEPARATOR,
-        e.body,
+        escape(e.body),
+        end_line(e.message_id),
     ])
 
 
@@ -87,8 +112,11 @@ def parse(text):
             continue
         rest = lines[i + 2:]
         body = rest[rest.index(SEPARATOR) + 1:] if SEPARATOR in rest else []
+        end = end_line(meta.group("id"))
+        if end in body:   # an envelope from before the end line runs to the end of the text
+            body = body[:body.index(end)]
         return Envelope(m.group("sender"), m.group("kind"), m.group("to"), meta.group("id"),
                         meta.group("conv"), int(meta.group("hops")),
                         not any(l.startswith("reply: not possible") for l in rest[:3]),
-                        any(l.startswith(WAITING) for l in rest[:3]), "\n".join(body))
+                        any(l.startswith(WAITING) for l in rest[:3]), unescape("\n".join(body)))
     return None

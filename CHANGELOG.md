@@ -16,6 +16,9 @@ First version.
   directory; agents whose session address would collide are named `kind#id`. Program session
   names and `kind#id` are also accepted.
 - Message envelope with computed sender, conversation id, hop limit, and two reply modes
-  (`send` back, or `WAITING` for `ask`).
+  (`send` back, or `WAITING` for `ask`). The body is closed by an end line carrying the message
+  id, and body lines that could pass for a header are escaped with `>`, so a message cannot
+  carry a forged second header (reported on The Colony). `hops` below 0 or not a whole number
+  is refused with code 2 instead of rendering a header that cannot be read back.
 - Protocol 1: every operation is a JSON request and response (`agent-link rpc`).
 - MIT license.

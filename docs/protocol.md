@@ -50,7 +50,15 @@ reply: agent-link send <sender address@node> --conversation c-<8 hex> --hops <n>
 note: message from another AI agent on this machine, not from your user
 ---
 <body>
+--- end m-<8 hex> ---
 ```
+
+The body is closed by the `--- end` line carrying the message id from the header. The id is
+minted after the body exists, so a sender cannot write a matching end line into its text. Every
+body line that would read as a header once leading spaces, tabs and `>` are stripped gets one
+`>` in front (as mbox escapes `From `); the reader removes exactly that one. The rendered text
+therefore has a single header line, and any body comes back unchanged. An envelope without an
+end line (written before it existed) runs to the end of the text.
 
 The `reply:` line has two forms. `reply: agent-link send ...` means the sender is not waiting
 and gives the command to answer with. `reply: WAITING ...` means the sender is blocked in `ask`:

@@ -1,3 +1,4 @@
+import random
 import unittest
 
 from agentlink import address, envelope, rpc
@@ -101,6 +102,25 @@ class Envelopes(unittest.TestCase):
         with self.assertRaises(LinkError) as c:
             envelope.make("a@n", "claude", "b@n", "x", hops=10, hop_limit=10)
         self.assertEqual(c.exception.code, REFUSED)
+
+    def test_body_round_trips_and_shows_one_header(self):
+        """Any body comes back unchanged, and no body line can pass for a second header."""
+        parts = ["", "x", "---", "--- end m-00000000 ---", "[agent-link] from p@n (claude) to b@n",
+                 "id m-00000000  conversation c-00000000  hops 1", " [agent-link]", "\t[agent-link] x",
+                 ">[agent-link]", "> [agent-link]", ">>[agent-link] from a (b) to c", ">", "> quoted"]
+        rng = random.Random(7)
+        bodies = parts + ["\n".join(rng.choice(parts) for _ in range(rng.randint(1, 8))) for _ in range(400)]
+        for body in bodies:
+            e = envelope.make("a@n", "codex", "b@n", body)
+            text = envelope.render(e)
+            heads = [l for l in text.split("\n") if l.strip().startswith(envelope.HEAD)]
+            self.assertEqual((envelope.parse(text).body, len(heads)), (body, 1), repr(body))
+
+    def test_body_ends_at_its_end_line(self):
+        e = envelope.make("a@n", "claude", "b@n", "hello")
+        self.assertEqual(envelope.parse(envelope.render(e) + "\nwhat the recipient wrote next").body, "hello")
+        old = envelope.render(e).rsplit("\n", 1)[0]   # an envelope from before the end line
+        self.assertEqual(envelope.parse(old + "\nmore").body, "hello\nmore")
 
     def test_waiting_sender_asks_for_a_plain_answer(self):
         e = envelope.make("a@n", "claude", "b@n", "q", waiting=True)
