@@ -39,6 +39,8 @@ changed.
 - Linux (process information comes from `/proc` and `ps`)
 - Python 3.11 or newer, standard library only
 - tmux, with the agents running in tmux sessions (the session name is the agent's address)
+- the agents on the same machine; agents on other machines and VMs are planned, see
+  [docs/protocol.md](docs/protocol.md)
 - the agent programs themselves:
 
 | program | versions checked | notes |
