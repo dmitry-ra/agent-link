@@ -188,6 +188,10 @@ class ClaudeCode(Adapter):
             missing = [k for k in ("tmux", "messagingSocketPath", "status", "kind") if k not in d]
             checks.append((not missing, f"session {d['pid']} (v{d.get('version', '?')}): "
                                         + ("fields ok" if not missing else f"missing {missing}")))
+            if "status" in d:
+                st = d["status"]
+                checks.append((st in STATUS, f"session {d['pid']}: status {st!r} "
+                                             + ("known" if st in STATUS else f"is new to agent-link, known: {sorted(STATUS)}")))
             checks.append((transcript_path(d["sessionId"], self.projects_dir) is not None,
                            f"session {d['pid']}: transcript found"))
         return checks

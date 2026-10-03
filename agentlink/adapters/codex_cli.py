@@ -371,8 +371,10 @@ class CodexCli(Adapter):
         if rollouts:
             newest = max(rollouts.values(), key=lambda f: f.stat().st_mtime)
             first = records(newest)[:1]
-            ok = bool(first) and first[0].get("type") == "session_meta"
-            checks.append((ok, f"rollout format: first record is session_meta ({newest.name[:40]}...)"))
+            seen = first[0].get("type") if first else None
+            checks.append((seen == "session_meta", "rollout format: first record is session_meta"
+                                                   + ("" if seen == "session_meta" else f", found {seen!r}")
+                                                   + f" ({newest.name[:40]}...)"))
         for pane_id, (pid, env) in self.tui_pids(ctx).items():
             pane = ctx.pane_by_id[pane_id]
             has = env.get("CODEX_TUI_RECORD_SESSION") == "1" and env.get(LOG_ENV)

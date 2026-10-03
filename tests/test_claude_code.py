@@ -57,6 +57,13 @@ class ClaudeCodeAdapter(unittest.TestCase):
         self.assertEqual(cc.answer_after(lines(split), "m-xyz"), ("done", "ANSWER"))
         self.assertEqual(cc.answer_after(lines(split[:2]), "m-xyz")[0], "running")
 
+    def test_doctor_names_an_unknown_status_value(self):
+        self.home.add_session(101, S1, "project-1:@0.%1", socket="s", status="compacting")
+        checks = [text for ok, text in self.a.doctor(self.ctx) if not ok]
+        self.assertTrue(any("'compacting'" in t and "known" in t for t in checks), checks)
+        self.home.add_session(101, S1, "project-1:@0.%1", socket="s", status="idle")
+        self.assertIn((True, "session 101: status 'idle' known"), self.a.doctor(self.ctx))
+
     def test_poll_reports_a_recipient_that_exited(self):
         ref = self.a.instances(self.ctx)[0]
         self.home.transcript(S1, [claude_enqueue("msg m-abc"), claude_assistant("thinking", stop="tool_use")])

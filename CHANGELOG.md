@@ -25,4 +25,6 @@ First version.
   a failed turn (code 6), as they already did for Pi, instead of waiting out the timeout.
 - A timeout (code 5) on a message never seen in the recipient's transcript says so, instead of
   reading like a delivered message, and points to `agent-link status` before any resend.
+- `doctor` names what it found next to what it expected: an unknown Claude Code session status
+  value, the type of the first record of a Codex rollout.
 - MIT license.
