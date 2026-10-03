@@ -96,7 +96,9 @@ There are two kinds of `reply:` line; read it before answering:
 - `reply: agent-link send ...` - the sender is not waiting: run that command with your answer.
 - `reply: WAITING ...` - the sender used `ask` and is blocked until your turn ends: make your
   answer the last text of this turn and do not run `agent-link send`.
-- Send exactly one message per reply. Check the exit code: 0 means delivered.
+- Send exactly one message per reply. Check the exit code: 0 means delivered. Never resend on
+  a timeout or "delivery unknown": `agent-link status ADDR MESSAGE_ID` tells whether the first
+  copy arrived, and a second copy would be a second task.
 - Keep `--conversation` and `--hops` as given: they stop two agents from answering each other
   forever (past the hop limit a message is refused with code 8).
 - If the header says `reply: not possible`, the sender cannot receive messages; answer in your
@@ -131,7 +133,7 @@ starts with `[agent-link]`.
 | 0 | ok | |
 | 1 | internal error (a bug in agent-link) | report it with the command you ran |
 | 2 | bad call, unknown or ambiguous address | read the message: it lists valid addresses |
-| 3 | the recipient cannot take messages | see the note in `agent-link list` |
+| 3 | the recipient cannot take messages, or delivery is unknown | see the note in `agent-link list`; on "delivery unknown" do not send again: check with `agent-link status` first, a second copy is a second task |
 | 4 | the recipient's turn waits for a human to approve a command | the human must answer in that terminal pane (named in the message) |
 | 5 | timed out waiting for the answer | status running: the recipient is on it, read it later or wait for its reply; status pending: it was never seen in the recipient's transcript, check with `agent-link status` before sending again |
 | 6 | the recipient's turn ended with an error or was aborted | read the recipient to see why |
