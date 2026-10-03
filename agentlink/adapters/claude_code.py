@@ -14,7 +14,7 @@ from pathlib import Path
 from ..model import NO_INBOX, OK, REFUSED, TIMEOUT, TURN_FAILED, USAGE, AgentRef, LinkError, Receipt
 from .. import multiplexers
 from ..platform import is_alive
-from . import Adapter
+from . import Adapter, program_present
 from ._claude_inbox import deliver
 
 # Claude Code reports "shell" while a command it started is running.
@@ -181,7 +181,10 @@ class ClaudeCode(Adapter):
     def doctor(self, ctx):
         base = self.sessions_dir or config_dir() / "sessions"
         if not base.is_dir():
-            return [(None, f"not found here (no session registry {base})")]
+            if not program_present(ctx, "claude"):
+                return [(None, f"not found here (no claude on PATH, no claude process, no session registry {base})")]
+            return [(False, f"session registry {base} not found, yet Claude Code is on PATH or running: "
+                            "a new version may have moved it, or CLAUDE_CONFIG_DIR differs")]
         checks = [(True, f"session registry {base}")]
         entries = registry_entries(base)
         live = [d for d in entries if ctx.table.alive(d["pid"])]

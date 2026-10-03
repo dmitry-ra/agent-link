@@ -31,7 +31,7 @@ from pathlib import Path
 from .. import multiplexers
 from ..model import AWAITING_APPROVAL, NO_INBOX, OK, PAUSED, TIMEOUT, TURN_FAILED, AgentRef, LinkError, Receipt
 from ..platform import environ
-from . import Adapter, timeout_text
+from . import Adapter, program_present, timeout_text
 
 ID_RE = re.compile(r"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$")
 TURN_END = ("task_complete", "turn_aborted")
@@ -362,8 +362,8 @@ class CodexCli(Adapter):
 
     def doctor(self, ctx):
         home = self._home()
-        if shutil.which("codex") is None and not (home / "sessions").is_dir():
-            return [(None, f"not found here (no codex on PATH, no thread store {home / 'sessions'})")]
+        if not program_present(ctx, "codex") and not (home / "sessions").is_dir():
+            return [(None, f"not found here (no codex on PATH, no codex process, no thread store {home / 'sessions'})")]
         checks = [(shutil.which("codex") is not None, "codex on PATH")]
         checks.append(((home / "sessions").is_dir(), f"thread store {home / 'sessions'}"))
         rollouts = self.rollouts()

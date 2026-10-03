@@ -89,7 +89,8 @@ def show(cmd, r):
         print(f"{r['address']}  {me['kind']}  {me['state']}{extra}")
     elif cmd == "list":
         if not r["agents"]:
-            print(f"0 agents ({r['panes']} multiplexer panes seen, none runs a supported program: "
+            n = r["panes"]
+            print(f"0 agents ({n} multiplexer pane{'' if n == 1 else 's'} seen, none runs a supported program: "
                   f"{', '.join(r['kinds'])})")
         for g in r["agents"]:
             mark = " (you)" if g["address"] == r["me"] else ""

@@ -5,6 +5,8 @@ ADAPTERS below, add fixtures and tests (tests/conformance.py must pass), and des
 harness in docs/adapters/<kind>.md. See docs/adding-an-adapter.md.
 """
 
+import re
+import shutil
 import time
 
 from ..model import NO_INBOX, TIMEOUT, LinkError
@@ -17,6 +19,14 @@ def timeout_text(message_id, timeout, status):
         return (f"no answer to {message_id} within {timeout}s: not observed in the recipient's transcript "
                 "(still queued, or never arrived); check with agent-link status before sending again")
     return f"no answer to {message_id} within {timeout}s (status {status})"
+
+
+def program_present(ctx, name, title=None):
+    """Any trace of a program here: on PATH, or a process running it. A doctor check reports a
+    program as absent only when this is false and its data directory is missing too; otherwise a
+    missing directory is a fault (a new version moved it, or the caller's environment differs)."""
+    title = title or re.compile(rf"(^|/){re.escape(name)}(\s|$)")
+    return shutil.which(name) is not None or any(title.search(a) for a in ctx.table.args.values())
 
 
 class Context:

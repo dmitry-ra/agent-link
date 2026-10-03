@@ -5,6 +5,7 @@ writes the response, which is also how remote nodes will be driven (docs/protoco
 """
 
 import os
+import shutil
 
 from . import address, config, envelope, multiplexers
 from .adapters import Context, registry
@@ -66,6 +67,15 @@ def doctor_checks(raw):
     return checks, not any(c["state"] == "fail" for c in checks)
 
 
+def panes_check(panes):
+    # tmux is required, so its absence is a fault; tmux present with no panes is just early.
+    if shutil.which("tmux") is None:
+        return ("", False, "tmux not on PATH: agents are found only inside tmux sessions")
+    if not panes:
+        return ("", None, "no tmux panes: start the agents inside tmux sessions")
+    return ("", True, f"{len(panes)} multiplexer pane{'' if len(panes) == 1 else 's'}")
+
+
 def adapter_for(ref, adapter_list):
     for a in adapter_list:
         if a.kind == ref.kind:
@@ -99,8 +109,7 @@ def _handle(req):
     if op == "doctor":
         present = os.path.exists(cfg["path"])
         raw = [("", True, f"config {cfg['path']} ({'loaded' if present else 'absent, defaults'}; node {ctx.node})"),
-               ("", True if ctx.panes else None,
-                f"{len(ctx.panes)} multiplexer panes" if ctx.panes else "no tmux panes yet: agents are found only inside tmux")]
+               panes_check(ctx.panes)]
         for a in alist:
             raw += [(a.kind, ok, text) for ok, text in a.doctor(ctx)]
         checks, ok = doctor_checks(raw)

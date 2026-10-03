@@ -45,6 +45,9 @@ class Conformance(unittest.TestCase):
                 self.assertEqual(c.exception.code, NO_INBOX)
                 for flag in ("can_receive", "can_read", "reply_detection", "subagents"):
                     self.assertIsInstance(getattr(a, flag), bool)
+                with mock.patch("agentlink.multiplexers.screen", return_value=""):
+                    checks = a.doctor(ctx)
+                self.assertTrue(all(ok in (True, False, None) and isinstance(text, str) for ok, text in checks), checks)
 
 
 if __name__ == "__main__":

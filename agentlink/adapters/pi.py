@@ -29,7 +29,7 @@ from .. import multiplexers
 from ..model import (AWAITING_APPROVAL, NO_INBOX, OK, REFUSED, TIMEOUT, TURN_FAILED, USAGE, AgentRef, LinkError,
                      Receipt)
 from ..platform import is_alive
-from . import Adapter
+from . import Adapter, program_present
 
 PROTOCOL = 1
 CUSTOM_TYPE = "agent-link"
@@ -293,6 +293,8 @@ class Pi(Adapter):
 
     def doctor(self, ctx):
         dirs = self.dirs()
+        if not any(d.exists() for d in dirs) and not program_present(ctx, "pi", PI_TITLE):
+            return [(None, f"not found here (no pi on PATH, no pi process, no registry {', '.join(str(d) for d in dirs)})")]
         entries = registry_entries(dirs)
         live = [d for d in entries if runs_pi(ctx, d["pid"])]
         checks = [(False, f"registry {d} is not a private directory of this user; its entries are ignored")

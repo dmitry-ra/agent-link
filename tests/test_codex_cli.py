@@ -4,7 +4,8 @@ from pathlib import Path
 import unittest
 from unittest import mock
 
-from agentlink.adapters import codex_cli as cx
+from agentlink.adapters import Context, codex_cli as cx
+from agentlink.platform.linux import ProcessTable
 from agentlink.model import OK, PAUSED, TIMEOUT
 from tests.helpers import (T1, T2, T3, CodexHome, context, cx_ev, cx_meta, cx_msg, fake_codex_on_path, tui_marker,
                            tui_turn)
@@ -118,8 +119,11 @@ class CodexCliAdapter(unittest.TestCase):
         self.assertTrue(any("found 'turn_context'" in t for t in checks), checks)
 
     def test_doctor_reports_a_missing_codex_as_absent(self):
-        with tempfile.TemporaryDirectory() as empty, mock.patch.object(cx.shutil, "which", return_value=None):
-            self.assertEqual([ok for ok, _ in cx.CodexCli(home=Path(empty)).doctor(self.ctx)], [None])
+        bare = Context("node1", ProcessTable([("1", "0", "init"), ("300", "1", "bash")]), [])
+        with tempfile.TemporaryDirectory() as empty, mock.patch("shutil.which", return_value=None):
+            self.assertEqual([ok for ok, _ in cx.CodexCli(home=Path(empty)).doctor(bare)], [None])
+            with mock.patch.object(cx.CodexCli, "tui_pids", return_value={}):   # codex runs (201), no store: a fault
+                self.assertNotIn(None, [ok for ok, _ in cx.CodexCli(home=Path(empty)).doctor(self.ctx)])
         with mock.patch.object(cx.shutil, "which", return_value=None), mock.patch.object(self.a, "tui_pids", return_value={}):
             self.assertIn((False, "codex on PATH"), self.a.doctor(self.ctx))   # threads here, binary gone: a fault
 
