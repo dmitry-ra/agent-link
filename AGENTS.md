@@ -33,7 +33,7 @@ agent-link read codex-1 -n 20                               # what it has been d
 | `ask ADDR TEXT [--timeout S]` | send, then wait for the answer to this message and print it (default 600 s) |
 | `status ADDR MESSAGE_ID` | what happened to a message you sent: pending, running, answered, failed, blocked |
 | `guide` | print this file |
-| `doctor` | check that every supported agent program looks as agent-link expects |
+| `doctor` | check that every supported agent program looks as agent-link expects; a program not installed here is shown as `skip`, not as a failure |
 | `rpc` | one JSON request on stdin, JSON response on stdout (see docs/protocol.md) |
 
 Add `--json` to any command for machine-readable output.

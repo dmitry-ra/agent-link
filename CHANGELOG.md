@@ -27,6 +27,10 @@ First version.
   its turns run in a shared app-server, so a closed terminal UI does not mean the turn stopped.
 - A timeout (code 5) on a message never seen in the recipient's transcript says so, instead of
   reading like a delivered message, and points to `agent-link status` before any resend.
+- First run on a machine without agents: `doctor` shows a program that is not installed as
+  `skip` (JSON `state: absent`) instead of a failure, and exits 0 unless a present program fails;
+  an empty `list` says how many panes it saw and which programs it looks for (reported on The
+  Colony).
 - `doctor` names what it found next to what it expected: an unknown Claude Code session status
   value (reported, not failed: it is shown as is), the type of the first record of a Codex rollout.
 - Docs: what a successful `send` proves for each program; check `status` instead of resending;
