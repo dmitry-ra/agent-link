@@ -115,6 +115,18 @@ disk then. Start it with `integrations/codex-tui.sh` (see Requirements) and type
 Optional: `~/.config/agent-link/config.toml` (or `$AGENT_LINK_CONFIG`) with `node` (this
 machine's name in addresses), `hop_limit` and `[aliases]`. See `agentlink/config.py`.
 
+## What "delivered" means
+
+Each program offers a different receipt, so exit code 0 from `send` proves a different thing
+for each. None of them proves that the model has read the message: `agent-link status` shows
+when it appears in the recipient's transcript (`pending`, then `running`).
+
+| recipient | exit 0 proves | reported apart from success |
+|---|---|---|
+| Pi | the extension took the line and queued it in Pi, which answered `ok` | refused while Pi compacts (8); no answer within 5 s: "delivery unknown" (3) |
+| Claude Code | only that no refusal arrived within 2 s: Claude Code sends no receipt for a delivered message | held for approval, dropped or refused by the receiver (8); no inbox socket (3) |
+| Codex CLI | `codex queue` exited 0: the message is queued on the thread | queue paused after an interrupted turn (7); `codex queue` failed (3) |
+
 ## Security model
 
 - **Trust boundary: one user account.** agent-link only sees and talks to agents of the user it
