@@ -55,6 +55,17 @@ def whoami(ctx, adapter_list, refs, pid=None, env=None):
     return me
 
 
+def doctor_checks(raw):
+    """(checks, ok) from (kind, ok, text) triples, where ok None means the program is absent here.
+
+    A program that is not installed is not a fault of agent-link; only a present program whose
+    formats or prerequisites do not match is a failure.
+    """
+    checks = [{"ok": ok is not False, "state": "absent" if ok is None else "ok" if ok else "fail",
+               "text": f"{kind}: {text}" if kind else text} for kind, ok, text in raw]
+    return checks, not any(c["state"] == "fail" for c in checks)
+
+
 def adapter_for(ref, adapter_list):
     for a in adapter_list:
         if a.kind == ref.kind:
@@ -82,17 +93,18 @@ def _handle(req):
         return {**base, "ok": True, "code": OK, "me": me.public(), "address": f"{me.address}@{ctx.node}"}
 
     if op == "list":
-        return {**base, "ok": True, "code": OK, "me": me.address,
-                "agents": [r.public() for r in sorted(refs, key=lambda r: r.address)]}
+        return {**base, "ok": True, "code": OK, "me": me.address, "panes": len(ctx.panes),
+                "kinds": [a.kind for a in alist], "agents": [r.public() for r in sorted(refs, key=lambda r: r.address)]}
 
     if op == "doctor":
         present = os.path.exists(cfg["path"])
-        checks = [{"ok": True, "text": f"config {cfg['path']} ({'loaded' if present else 'absent, defaults'}; node {ctx.node})"},
-                  {"ok": bool(ctx.panes), "text": f"{len(ctx.panes)} multiplexer panes"}]
+        raw = [("", True, f"config {cfg['path']} ({'loaded' if present else 'absent, defaults'}; node {ctx.node})"),
+               ("", True if ctx.panes else None,
+                f"{len(ctx.panes)} multiplexer panes" if ctx.panes else "no tmux panes yet: agents are found only inside tmux")]
         for a in alist:
-            checks += [{"ok": ok, "text": f"{a.kind}: {text}"} for ok, text in a.doctor(ctx)]
-        bad = [c for c in checks if not c["ok"]]
-        return {**base, "ok": not bad, "code": OK if not bad else NO_INBOX, "checks": checks}
+            raw += [(a.kind, ok, text) for ok, text in a.doctor(ctx)]
+        checks, ok = doctor_checks(raw)
+        return {**base, "ok": ok, "code": OK if ok else NO_INBOX, "checks": checks}
 
     if op not in ("read", "send", "ask", "status"):
         raise LinkError(USAGE, f"unknown op {op!r}")

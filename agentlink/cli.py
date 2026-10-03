@@ -88,6 +88,9 @@ def show(cmd, r):
         extra = "" if me["can_receive"] else f"  ({me['note']})"
         print(f"{r['address']}  {me['kind']}  {me['state']}{extra}")
     elif cmd == "list":
+        if not r["agents"]:
+            print(f"0 agents ({r['panes']} multiplexer panes seen, none runs a supported program: "
+                  f"{', '.join(r['kinds'])})")
         for g in r["agents"]:
             mark = " (you)" if g["address"] == r["me"] else ""
             note = f"  [{g['note']}]" if g["note"] else ""
@@ -114,7 +117,7 @@ def show(cmd, r):
         print(f"{r['message']} at {r['agent']['address']}: {r['message_status']}" + (f"\n{r['detail']}" if r["detail"] else ""))
     elif cmd == "doctor":
         for c in r["checks"]:
-            print(("ok   " if c["ok"] else "FAIL ") + c["text"])
+            print({"ok": "ok   ", "fail": "FAIL ", "absent": "skip "}[c["state"]] + c["text"])
 
 
 def main(argv=None):

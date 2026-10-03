@@ -180,7 +180,9 @@ class ClaudeCode(Adapter):
 
     def doctor(self, ctx):
         base = self.sessions_dir or config_dir() / "sessions"
-        checks = [(base.is_dir(), f"session registry {base}")]
+        if not base.is_dir():
+            return [(None, f"not found here (no session registry {base})")]
+        checks = [(True, f"session registry {base}")]
         entries = registry_entries(base)
         live = [d for d in entries if ctx.table.alive(d["pid"])]
         checks.append((True, f"{len(live)} live of {len(entries)} registered sessions"))

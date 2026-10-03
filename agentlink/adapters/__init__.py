@@ -78,7 +78,11 @@ class Adapter:
             time.sleep(2)
 
     def doctor(self, ctx):
-        """Checks of the formats and prerequisites this adapter relies on: list of (ok, text)."""
+        """Checks of the formats and prerequisites this adapter relies on: list of (ok, text).
+
+        ok is True, False, or None when the program is not on this machine at all: that is reported
+        as absent, not as a failure.
+        """
         return []
 
 

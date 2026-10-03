@@ -1,5 +1,6 @@
 import os
 import tempfile
+from pathlib import Path
 import unittest
 from unittest import mock
 
@@ -115,6 +116,12 @@ class CodexCliAdapter(unittest.TestCase):
             os.utime(self.home.day / f"rollout-2026-01-01T00-00-00-{T2}.jsonl", (2 * 10 ** 9, 2 * 10 ** 9))
             checks = [text for ok, text in self.a.doctor(self.ctx) if not ok]
         self.assertTrue(any("found 'turn_context'" in t for t in checks), checks)
+
+    def test_doctor_reports_a_missing_codex_as_absent(self):
+        with tempfile.TemporaryDirectory() as empty, mock.patch.object(cx.shutil, "which", return_value=None):
+            self.assertEqual([ok for ok, _ in cx.CodexCli(home=Path(empty)).doctor(self.ctx)], [None])
+        with mock.patch.object(cx.shutil, "which", return_value=None), mock.patch.object(self.a, "tui_pids", return_value={}):
+            self.assertIn((False, "codex on PATH"), self.a.doctor(self.ctx))   # threads here, binary gone: a fault
 
     def test_timeout_on_a_never_seen_message_says_so(self):
         with mock.patch.object(self.a, "poll", return_value=(TIMEOUT, "pending", "")):

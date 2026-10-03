@@ -57,6 +57,10 @@ class ClaudeCodeAdapter(unittest.TestCase):
         self.assertEqual(cc.answer_after(lines(split), "m-xyz"), ("done", "ANSWER"))
         self.assertEqual(cc.answer_after(lines(split[:2]), "m-xyz")[0], "running")
 
+    def test_doctor_reports_a_missing_claude_code_as_absent(self):
+        a = cc.ClaudeCode(sessions_dir=self.home.root / "nowhere", projects_dir=self.home.projects)
+        self.assertEqual([ok for ok, _ in a.doctor(self.ctx)], [None])
+
     def test_doctor_names_an_unknown_status_value(self):
         self.home.add_session(101, S1, "project-1:@0.%1", socket="s", status="compacting")
         checks = [(ok, text) for ok, text in self.a.doctor(self.ctx) if "status" in text]

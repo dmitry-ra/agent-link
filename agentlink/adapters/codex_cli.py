@@ -361,8 +361,10 @@ class CodexCli(Adapter):
             time.sleep(2)
 
     def doctor(self, ctx):
-        checks = [(shutil.which("codex") is not None, "codex on PATH")]
         home = self._home()
+        if shutil.which("codex") is None and not (home / "sessions").is_dir():
+            return [(None, f"not found here (no codex on PATH, no thread store {home / 'sessions'})")]
+        checks = [(shutil.which("codex") is not None, "codex on PATH")]
         checks.append(((home / "sessions").is_dir(), f"thread store {home / 'sessions'}"))
         rollouts = self.rollouts()
         if rollouts:

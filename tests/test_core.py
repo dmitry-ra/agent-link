@@ -1,7 +1,9 @@
+import contextlib
+import io
 import random
 import unittest
 
-from agentlink import address, envelope, rpc
+from agentlink import address, cli, envelope, rpc
 from agentlink.adapters import Adapter, Context
 from agentlink.platform.linux import ProcessTable
 from agentlink.model import NO_INBOX, REFUSED, TIMEOUT, USAGE, AgentRef, LinkError
@@ -146,6 +148,23 @@ class Claims(Adapter):
     def whoami(self, ctx, pid, env):
         return AgentRef(kind=self.kind, node="n", instance=f"{self.kind}-1",
                         private={"pid": self.pid} if self.pid else {})
+
+
+class FirstRun(unittest.TestCase):
+    def test_absent_program_is_not_a_failure(self):
+        checks, ok = rpc.doctor_checks([("", True, "config"), ("claude", None, "not found here")])
+        self.assertEqual(([c["state"] for c in checks], [c["ok"] for c in checks], ok), (["ok", "absent"], [True, True], True))
+        checks, ok = rpc.doctor_checks([("claude", None, "not found here"), ("codex", False, "codex on PATH")])
+        self.assertEqual(([c["state"] for c in checks], checks[1]["text"], ok), (["absent", "fail"], "codex: codex on PATH", False))
+
+    def test_empty_list_and_skipped_checks_are_spelled_out(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            cli.show("list", {"ok": True, "me": "x", "panes": 1, "kinds": ["claude", "codex"], "agents": []})
+            cli.show("doctor", {"ok": True, "checks": [{"ok": True, "state": "absent", "text": "claude: not found here"}]})
+        self.assertEqual(out.getvalue().splitlines(),
+                         ["0 agents (1 multiplexer panes seen, none runs a supported program: claude, codex)",
+                          "skip claude: not found here"])
 
 
 class TimeoutText(unittest.TestCase):
