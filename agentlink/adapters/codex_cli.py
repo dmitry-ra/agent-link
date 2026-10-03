@@ -29,7 +29,6 @@ from datetime import datetime
 from pathlib import Path
 
 from .. import multiplexers
-from ..platform import is_alive
 from ..model import AWAITING_APPROVAL, NO_INBOX, OK, PAUSED, TIMEOUT, TURN_FAILED, AgentRef, LinkError, Receipt
 from ..platform import environ
 from . import Adapter, timeout_text
@@ -333,15 +332,13 @@ class CodexCli(Adapter):
         return Receipt(OK, "queued", instance=ref.instance)
 
     def poll(self, ctx, ref, message_id):
-        pid = ref.private.get("pid")
-        alive = is_alive(pid) if pid else True   # before reading: an answer written just before exit still counts
+        # No liveness check here: turns run in the shared app-server, not in the TUI whose pid the
+        # ref carries, so a closed TUI does not mean the turn stopped.
         status, answers = answer_after(records(self._rollout(ref)), message_id)
         if status == "task_complete":
             return OK, "answered", answers[-1] if answers else ""
         if status in ("error", "turn_aborted"):
             return TURN_FAILED, "failed", f"turn ended with {status}: {answers[-1] if answers else ''}"
-        if not alive:
-            return TURN_FAILED, "failed", f"Codex (pid {pid}) exited before the turn ended"
         pane = ctx.pane_by_id.get(ref.pane_id)
         if pane:
             dialog, paused, cmd = screen_flags(multiplexers.screen(pane))

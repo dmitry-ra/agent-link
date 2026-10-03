@@ -75,6 +75,21 @@ class ClaudeCodeAdapter(unittest.TestCase):
             self.home.transcript(S1, [claude_enqueue("msg m-abc"), claude_assistant("RIGHT")])
             self.assertEqual(self.a.poll(self.ctx, ref, "m-abc"), (OK, "answered", "RIGHT"))
 
+    def test_poll_reads_liveness_first_and_trusts_a_ref_without_pid(self):
+        ref = self.a.instances(self.ctx)[0]
+        self.home.transcript(S1, [claude_enqueue("msg m-abc")])
+
+        def answers_then_exits(pid):   # the answer lands between the two reads, then the process is gone
+            self.home.transcript(S1, [claude_enqueue("msg m-abc"), claude_assistant("RIGHT")])
+            return False
+
+        with mock.patch.object(cc, "is_alive", side_effect=answers_then_exits):
+            self.assertEqual(self.a.poll(self.ctx, ref, "m-abc"), (OK, "answered", "RIGHT"))
+        self.home.transcript(S1, [claude_enqueue("msg m-abc")])
+        ref.private.pop("pid")
+        with mock.patch.object(cc, "is_alive", return_value=False):
+            self.assertEqual(self.a.poll(self.ctx, ref, "m-abc")[:2], (TIMEOUT, "running"))
+
 
 if __name__ == "__main__":
     unittest.main()

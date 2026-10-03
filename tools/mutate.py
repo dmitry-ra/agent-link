@@ -111,9 +111,13 @@ MUTANTS = [
     ("claude: exited recipient waited for", "agentlink/adapters/claude_code.py",
      '            return TURN_FAILED, "failed", f"Claude Code (pid {pid}) exited before the turn ended"',
      '            return TIMEOUT, "running", ""'),
-    ("codex: exited recipient waited for", "agentlink/adapters/codex_cli.py",
-     '            return TURN_FAILED, "failed", f"Codex (pid {pid}) exited before the turn ended"',
-     '            return TIMEOUT, "running", ""'),
+    ("claude: liveness read after the transcript", "agentlink/adapters/claude_code.py",
+     '        alive = is_alive(pid) if pid else True   # before reading: an answer written just before exit still counts\n'
+     '        status, answer = answer_after(self._lines(ref), message_id)',
+     '        status, answer = answer_after(self._lines(ref), message_id)\n'
+     '        alive = is_alive(pid) if pid else True'),
+    ("claude: recipient without a pid taken for dead", "agentlink/adapters/claude_code.py",
+     "alive = is_alive(pid) if pid else True", "alive = is_alive(pid) if pid else False"),
     ("timeout: never-seen message reported like any other", "agentlink/adapters/__init__.py",
      '    if status == "pending":\n        return (f"no answer', '    if False:\n        return (f"no answer'),
     ("claude doctor: unknown status accepted", "agentlink/adapters/claude_code.py",

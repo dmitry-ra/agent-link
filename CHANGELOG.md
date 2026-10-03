@@ -22,8 +22,9 @@ First version.
   is refused with code 2 instead of rendering a header that cannot be read back; `agent-link rpc`
   no longer accepts `hops` as a string or float.
 - Protocol 1: every operation is a JSON request and response (`agent-link rpc`).
-- `ask` and `status` notice a Claude Code or Codex recipient that exited mid-turn and report
-  a failed turn (code 6), as they already did for Pi, instead of waiting out the timeout.
+- `ask` and `status` notice a Claude Code recipient that exited mid-turn and report a failed
+  turn (code 6), as they already did for Pi, instead of waiting out the timeout. Not for Codex:
+  its turns run in a shared app-server, so a closed terminal UI does not mean the turn stopped.
 - A timeout (code 5) on a message never seen in the recipient's transcript says so, instead of
   reading like a delivered message, and points to `agent-link status` before any resend.
 - `doctor` names what it found next to what it expected: an unknown Claude Code session status
