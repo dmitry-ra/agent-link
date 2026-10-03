@@ -133,7 +133,7 @@ starts with `[agent-link]`.
 | 2 | bad call, unknown or ambiguous address | read the message: it lists valid addresses |
 | 3 | the recipient cannot take messages | see the note in `agent-link list` |
 | 4 | the recipient's turn waits for a human to approve a command | the human must answer in that terminal pane (named in the message) |
-| 5 | timed out waiting for the answer | the message was delivered; read the recipient later or wait for its reply |
+| 5 | timed out waiting for the answer | status running: the recipient is on it, read it later or wait for its reply; status pending: it was never seen in the recipient's transcript, check with `agent-link status` before sending again |
 | 6 | the recipient's turn ended with an error or was aborted | read the recipient to see why |
 | 7 | the recipient's queue is paused after an interrupted turn | a human must type something neutral in that pane |
 | 8 | refused (hop limit, or the recipient's inbox refused it) | stop the exchange or ask your user |

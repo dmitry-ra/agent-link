@@ -4,7 +4,7 @@ import unittest
 from agentlink import address, envelope, rpc
 from agentlink.adapters import Adapter, Context
 from agentlink.platform.linux import ProcessTable
-from agentlink.model import NO_INBOX, REFUSED, USAGE, AgentRef, LinkError
+from agentlink.model import NO_INBOX, REFUSED, TIMEOUT, USAGE, AgentRef, LinkError
 
 
 def ref(kind, instance, session="", position="", sub="", parent=""):
@@ -139,6 +139,21 @@ class Claims(Adapter):
     def whoami(self, ctx, pid, env):
         return AgentRef(kind=self.kind, node="n", instance=f"{self.kind}-1",
                         private={"pid": self.pid} if self.pid else {})
+
+
+class TimeoutText(unittest.TestCase):
+    def test_pending_is_not_reported_as_delivered(self):
+        class Stuck(Adapter):
+            def __init__(self, status):
+                self.status = status
+
+            def poll(self, ctx, ref, message_id):
+                return TIMEOUT, self.status, ""
+
+        for status, word in [("pending", "not observed"), ("running", "(status running)")]:
+            with self.subTest(status):
+                code, text = Stuck(status).await_reply(None, None, "m-abc", 0)
+                self.assertEqual((code, word in text, "delivered" in text), (TIMEOUT, True, False))
 
 
 class WhoAmI(unittest.TestCase):

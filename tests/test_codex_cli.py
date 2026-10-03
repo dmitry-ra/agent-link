@@ -123,6 +123,11 @@ class CodexCliAdapter(unittest.TestCase):
                                        cx_ev("task_complete")])
                 self.assertEqual(self.a.poll(self.ctx, ref, "m-abc"), (OK, "answered", "RIGHT"))
 
+    def test_timeout_on_a_never_seen_message_says_so(self):
+        with mock.patch.object(self.a, "poll", return_value=(TIMEOUT, "pending", "")):
+            code, text = self.a.await_reply(self.ctx, None, "m-abc", 0)
+        self.assertEqual((code, "not observed" in text), (TIMEOUT, True))
+
     def test_send_queues_and_reports_pause(self):
         with tempfile.TemporaryDirectory() as tmp:
             record = fake_codex_on_path(tmp)

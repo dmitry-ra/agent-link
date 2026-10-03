@@ -23,4 +23,6 @@ First version.
 - Protocol 1: every operation is a JSON request and response (`agent-link rpc`).
 - `ask` and `status` notice a Claude Code or Codex recipient that exited mid-turn and report
   a failed turn (code 6), as they already did for Pi, instead of waiting out the timeout.
+- A timeout (code 5) on a message never seen in the recipient's transcript says so, instead of
+  reading like a delivered message, and points to `agent-link status` before any resend.
 - MIT license.

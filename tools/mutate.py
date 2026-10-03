@@ -105,6 +105,8 @@ MUTANTS = [
     ("codex: exited recipient waited for", "agentlink/adapters/codex_cli.py",
      '            return TURN_FAILED, "failed", f"Codex (pid {pid}) exited before the turn ended"',
      '            return TIMEOUT, "running", ""'),
+    ("timeout: never-seen message reported like any other", "agentlink/adapters/__init__.py",
+     '    if status == "pending":\n        return (f"no answer', '    if False:\n        return (f"no answer'),
     ("pi: dead registry entries listed", "agentlink/adapters/pi.py",
      'registry_entries(self.dirs()) if runs_pi(ctx, d["pid"])]', "registry_entries(self.dirs())]"),
     ("pi: reused pid taken for Pi", "agentlink/adapters/pi.py",

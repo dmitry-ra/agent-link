@@ -10,6 +10,15 @@ import time
 from ..model import NO_INBOX, TIMEOUT, LinkError
 
 
+def timeout_text(message_id, timeout, status):
+    """What a caller learns from a timeout. "pending" means the message was never seen in the
+    recipient's transcript: queued behind a turn, or never arrived; resending would duplicate it."""
+    if status == "pending":
+        return (f"no answer to {message_id} within {timeout}s: not observed in the recipient's transcript "
+                "(still queued, or never arrived); check with agent-link status before sending again")
+    return f"no answer to {message_id} within {timeout}s (status {status})"
+
+
 class Context:
     """Live machine state, gathered once per command and shared by all adapters."""
 
@@ -65,7 +74,7 @@ class Adapter:
             if status in ("answered", "failed", "blocked"):
                 return code, text
             if time.time() >= deadline:
-                return TIMEOUT, f"no answer to {message_id} within {timeout}s (status {status})"
+                return TIMEOUT, timeout_text(message_id, timeout, status)
             time.sleep(2)
 
     def doctor(self, ctx):

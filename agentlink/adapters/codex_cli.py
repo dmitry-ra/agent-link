@@ -32,7 +32,7 @@ from .. import multiplexers
 from ..platform import is_alive
 from ..model import AWAITING_APPROVAL, NO_INBOX, OK, PAUSED, TIMEOUT, TURN_FAILED, AgentRef, LinkError, Receipt
 from ..platform import environ
-from . import Adapter
+from . import Adapter, timeout_text
 
 ID_RE = re.compile(r"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$")
 TURN_END = ("task_complete", "turn_aborted")
@@ -360,7 +360,7 @@ class CodexCli(Adapter):
             if status in ("answered", "failed") or (status == "blocked" and time.time() > grace):
                 return code, text
             if time.time() >= deadline:
-                return TIMEOUT, f"no answer to {message_id} within {timeout}s (status {status})"
+                return TIMEOUT, timeout_text(message_id, timeout, status)
             time.sleep(2)
 
     def doctor(self, ctx):
