@@ -27,4 +27,8 @@ First version.
   reading like a delivered message, and points to `agent-link status` before any resend.
 - `doctor` names what it found next to what it expected: an unknown Claude Code session status
   value, the type of the first record of a Codex rollout.
+- Docs: what a successful `send` proves for each program; check `status` instead of resending;
+  ask other agents for evidence, not a verdict; `read` exposes whatever a conversation holds;
+  the hop counter bounds loops only within one conversation; remote nodes are planned; what
+  Claude Code documents and what it does not.
 - MIT license.
