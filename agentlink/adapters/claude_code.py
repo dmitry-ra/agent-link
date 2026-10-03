@@ -11,8 +11,9 @@ import json
 import os
 from pathlib import Path
 
-from ..model import NO_INBOX, OK, REFUSED, TIMEOUT, USAGE, AgentRef, LinkError, Receipt
+from ..model import NO_INBOX, OK, REFUSED, TIMEOUT, TURN_FAILED, USAGE, AgentRef, LinkError, Receipt
 from .. import multiplexers
+from ..platform import is_alive
 from . import Adapter
 from ._claude_inbox import deliver
 
@@ -168,9 +169,13 @@ class ClaudeCode(Adapter):
         return Receipt(code, detail or status, instance=ref.instance)
 
     def poll(self, ctx, ref, message_id):
+        pid = ref.private.get("pid")
+        alive = is_alive(pid) if pid else True   # before reading: an answer written just before exit still counts
         status, answer = answer_after(self._lines(ref), message_id)
         if status == "done":
             return OK, "answered", answer
+        if not alive:
+            return TURN_FAILED, "failed", f"Claude Code (pid {pid}) exited before the turn ended"
         return TIMEOUT, status, answer
 
     def doctor(self, ctx):

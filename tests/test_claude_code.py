@@ -1,6 +1,8 @@
 import unittest
+from unittest import mock
 
 from agentlink.adapters import claude_code as cc
+from agentlink.model import OK, TIMEOUT, TURN_FAILED
 from tests.helpers import S1, ClaudeHome, claude_assistant, claude_enqueue, claude_user, context
 
 
@@ -54,6 +56,17 @@ class ClaudeCodeAdapter(unittest.TestCase):
                  claude_assistant("ANSWER", msg_id="msg_1"), {"type": "system"}]
         self.assertEqual(cc.answer_after(lines(split), "m-xyz"), ("done", "ANSWER"))
         self.assertEqual(cc.answer_after(lines(split[:2]), "m-xyz")[0], "running")
+
+    def test_poll_reports_a_recipient_that_exited(self):
+        ref = self.a.instances(self.ctx)[0]
+        self.home.transcript(S1, [claude_enqueue("msg m-abc"), claude_assistant("thinking", stop="tool_use")])
+        with mock.patch.object(cc, "is_alive", return_value=True):
+            self.assertEqual(self.a.poll(self.ctx, ref, "m-abc")[:2], (TIMEOUT, "running"))
+        with mock.patch.object(cc, "is_alive", return_value=False):
+            code, status, text = self.a.poll(self.ctx, ref, "m-abc")
+            self.assertEqual((code, status, "exited" in text), (TURN_FAILED, "failed", True))
+            self.home.transcript(S1, [claude_enqueue("msg m-abc"), claude_assistant("RIGHT")])
+            self.assertEqual(self.a.poll(self.ctx, ref, "m-abc"), (OK, "answered", "RIGHT"))
 
 
 if __name__ == "__main__":

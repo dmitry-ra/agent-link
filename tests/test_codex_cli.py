@@ -4,7 +4,7 @@ import unittest
 from unittest import mock
 
 from agentlink.adapters import codex_cli as cx
-from agentlink.model import OK, PAUSED
+from agentlink.model import OK, PAUSED, TIMEOUT, TURN_FAILED
 from tests.helpers import (T1, T2, T3, CodexHome, context, cx_ev, cx_meta, cx_msg, fake_codex_on_path, tui_marker,
                            tui_turn)
 
@@ -108,6 +108,20 @@ class CodexCliAdapter(unittest.TestCase):
             helper = self.a.whoami(self.ctx, "1", {"CODEX_THREAD_ID": T3})
             self.assertEqual((helper.sub, helper.private["pid"]), ("helper", "201"))   # runs in its parent's process
             self.assertEqual(self.a.whoami(self.ctx, "1", {}), None)
+
+    def test_poll_reports_a_recipient_that_exited(self):
+        refs = self.instances([tui_marker("new_session", "2026-01-01T00:01:00.000Z"), tui_turn("cid-2")])
+        ref = next(r for r in refs if r.instance == T2)
+        self.home.rollout(T2, [cx_meta(T2), *cx_msg("user", "q m-abc"), cx_ev("task_started")])
+        with mock.patch("agentlink.multiplexers.screen", return_value=""):
+            with mock.patch.object(cx, "is_alive", return_value=True):
+                self.assertEqual(self.a.poll(self.ctx, ref, "m-abc")[:2], (TIMEOUT, "running"))
+            with mock.patch.object(cx, "is_alive", return_value=False):
+                code, status, text = self.a.poll(self.ctx, ref, "m-abc")
+                self.assertEqual((code, status, "exited" in text), (TURN_FAILED, "failed", True))
+                self.home.rollout(T2, [cx_meta(T2), *cx_msg("user", "q m-abc"), *cx_msg("assistant", "RIGHT"),
+                                       cx_ev("task_complete")])
+                self.assertEqual(self.a.poll(self.ctx, ref, "m-abc"), (OK, "answered", "RIGHT"))
 
     def test_send_queues_and_reports_pause(self):
         with tempfile.TemporaryDirectory() as tmp:
