@@ -10,12 +10,12 @@ builds the same objects, so `agent-link <cmd> --json` prints exactly what `rpc` 
 | op | fields | response fields |
 |---|---|---|
 | `whoami` | | `me` (agent), `address` (with node) |
-| `list` | `all` (bool) | `me` (address), `agents` (list of agent) |
+| `list` | `all` (bool) | `me` (address), `agents` (list of agent), `panes` (multiplexer panes seen), `kinds` (agent programs looked for) |
 | `read` | `to`, `limit` | `agent`, `entries` (list of `{time, role, text}`) |
 | `send` | `to`, `text`, `conversation`?, `hops`? | `receipt`, `conversation`, `hops` |
 | `ask` | `to`, `text`, `timeout`, `conversation`?, `hops`? | as `send`, plus `answer` |
 | `status` | `to`, `message` | `agent`, `message`, `message_status` (`pending`, `running`, `answered`, `failed`, `blocked`), `detail` |
-| `doctor` | | `checks` (list of `{ok, text}`) |
+| `doctor` | | `checks` (list of `{ok, state, text}`; `state` is `ok`, `fail` or `absent`, and `ok` is false only for `fail`). The response is `ok` with code 0 unless some check failed (code 3). `absent` means the program is not on this machine at all: not on PATH, no process, no data directory |
 
 Every response has `protocol`, `ok`, `code`, `status`; failures add `error`.
 
