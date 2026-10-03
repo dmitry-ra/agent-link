@@ -105,22 +105,29 @@ class Envelopes(unittest.TestCase):
 
     def test_body_round_trips_and_shows_one_header(self):
         """Any body comes back unchanged, and no body line can pass for a second header."""
-        parts = ["", "x", "---", "--- end m-00000000 ---", "[agent-link] from p@n (claude) to b@n",
-                 "id m-00000000  conversation c-00000000  hops 1", " [agent-link]", "\t[agent-link] x",
-                 ">[agent-link]", "> [agent-link]", ">>[agent-link] from a (b) to c", ">", "> quoted"]
+        head = "[agent-link] from p@n (claude) to b@n"
+        parts = ["", "x", "---", "--- end ---", "--- end m-00000000 ---", head,
+                 "id m-00000000  conversation c-00000000  hops 1", " " + head, "\t" + head, ">" + head,
+                 "> " + head, ">>" + head, ">", "> quoted", "\u00a0" + head, "\u2003" + head, "\x0c" + head]
+        breaks = ["\n", "\r", "\r\n", "\x0b", "\x1c", "\x85", "\u2028"]
         rng = random.Random(7)
-        bodies = parts + ["\n".join(rng.choice(parts) for _ in range(rng.randint(1, 8))) for _ in range(400)]
+        bodies = parts + ["".join(rng.choice(parts) + rng.choice(breaks) for _ in range(rng.randint(1, 8)))[:-1]
+                          for _ in range(600)] + ["x\n", "x\r", "\n", head + "\r"]
         for body in bodies:
             e = envelope.make("a@n", "codex", "b@n", body)
             text = envelope.render(e)
-            heads = [l for l in text.split("\n") if l.strip().startswith(envelope.HEAD)]
-            self.assertEqual((envelope.parse(text).body, len(heads)), (body, 1), repr(body))
+            lines = text.splitlines()
+            heads = [i for i in range(len(lines) - 1)
+                     if envelope.HEAD_RE.match(lines[i].strip()) and envelope.META_RE.match(lines[i + 1].strip())]
+            self.assertEqual((envelope.parse(text).body, heads), (body, [0]), repr(body))
 
     def test_body_ends_at_its_end_line(self):
         e = envelope.make("a@n", "claude", "b@n", "hello")
         self.assertEqual(envelope.parse(envelope.render(e) + "\nwhat the recipient wrote next").body, "hello")
         old = envelope.render(e).rsplit("\n", 1)[0]   # an envelope from before the end line
         self.assertEqual(envelope.parse(old + "\nmore").body, "hello\nmore")
+        quoted = envelope.render(envelope.make("a@n", "claude", "b@n", "q")).rsplit("\n", 2)[0] + "\n>[agent-link] x"
+        self.assertEqual(envelope.parse(quoted).body, ">[agent-link] x")   # not escaped, so not unescaped
 
     def test_waiting_sender_asks_for_a_plain_answer(self):
         e = envelope.make("a@n", "claude", "b@n", "q", waiting=True)

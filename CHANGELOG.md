@@ -19,7 +19,8 @@ First version.
   (`send` back, or `WAITING` for `ask`). The body is closed by an end line carrying the message
   id, and body lines that could pass for a header are escaped with `>`, so a message cannot
   carry a forged second header (reported on The Colony). `hops` below 0 or not a whole number
-  is refused with code 2 instead of rendering a header that cannot be read back.
+  is refused with code 2 instead of rendering a header that cannot be read back; `agent-link rpc`
+  no longer accepts `hops` as a string or float.
 - Protocol 1: every operation is a JSON request and response (`agent-link rpc`).
 - `ask` and `status` notice a Claude Code or Codex recipient that exited mid-turn and report
   a failed turn (code 6), as they already did for Pi, instead of waiting out the timeout.

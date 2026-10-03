@@ -51,19 +51,25 @@ def end_line(message_id):
     return f"{SEPARATOR} end {message_id} {SEPARATOR}"
 
 
+LEAD = re.compile(r"[\s>]*")
+
+
 def _looks_like_head(line):
-    return line.lstrip(" \t>").startswith(HEAD)
+    # The same line breaks (splitlines) and the same whitespace (str.strip) as parse(), so a line
+    # parse() would read as a header is always one this function catches.
+    return line[LEAD.match(line).end():].startswith(HEAD)
 
 
 def escape(body):
     """Prefix ">" to every line that could pass for a header; unescape() undoes it exactly."""
-    return "\n".join(">" + l if _looks_like_head(l) else l for l in body.split("\n"))
+    return "".join(">" + l if _looks_like_head(l) else l for l in body.splitlines(keepends=True))
 
 
 def unescape(body):
     # Stripping ">" in _looks_like_head makes a line and the same line with one ">" more agree,
     # so exactly the lines escape() prefixed lose their first character.
-    return "\n".join(l[1:] if l.startswith(">") and _looks_like_head(l[1:]) else l for l in body.split("\n"))
+    return "".join(l[1:] if l.startswith(">") and _looks_like_head(l[1:]) else l
+                   for l in body.splitlines(keepends=True))
 
 
 def new_id(prefix):
@@ -102,6 +108,7 @@ def render(e):
 
 def parse(text):
     """Envelope found in text, or None. Tolerates text before the header."""
+    raw = text.splitlines(keepends=True)
     lines = text.splitlines()
     for i, line in enumerate(lines):
         m = HEAD_RE.match(line.strip())
@@ -111,12 +118,16 @@ def parse(text):
         if not meta:
             continue
         rest = lines[i + 2:]
-        body = rest[rest.index(SEPARATOR) + 1:] if SEPARATOR in rest else []
+        start = i + 2 + rest.index(SEPARATOR) + 1 if SEPARATOR in rest else len(lines)
         end = end_line(meta.group("id"))
-        if end in body:   # an envelope from before the end line runs to the end of the text
-            body = body[:body.index(end)]
+        if end in lines[start:]:
+            # The body runs up to the newline render() put before the end line; only bodies
+            # written with an end line were escaped.
+            body = unescape("".join(raw[start:lines.index(end, start)])[:-1])
+        else:
+            body = "\n".join(lines[start:])
         return Envelope(m.group("sender"), m.group("kind"), m.group("to"), meta.group("id"),
                         meta.group("conv"), int(meta.group("hops")),
                         not any(l.startswith("reply: not possible") for l in rest[:3]),
-                        any(l.startswith(WAITING) for l in rest[:3]), unescape("\n".join(body)))
+                        any(l.startswith(WAITING) for l in rest[:3]), body)
     return None
