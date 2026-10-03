@@ -30,9 +30,11 @@ Agents using the tool: read [AGENTS.md](AGENTS.md), or run `agent-link guide`.
 
 agent-link is an independent project. It is not affiliated with, endorsed by or supported by
 Anthropic, OpenAI or the authors of Pi. It works by reading files and using local interfaces that
-Claude Code and Codex CLI keep for themselves, and through an extension for Pi; none of them is a
-documented public API, and any release of those programs may change them. `agent-link doctor` checks what it relies on and says what
-changed.
+Claude Code and Codex CLI keep for themselves, and through an extension for Pi. Claude Code
+documents its session inbox socket for scripts that post into their own session, but not the
+format agent-link relies on to message another session, nor its session registry and
+transcripts; the Codex files are not documented either. Any release of those programs may
+change them. `agent-link doctor` checks what it relies on and says what changed.
 
 ## Requirements
 
